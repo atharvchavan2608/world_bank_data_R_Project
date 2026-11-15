@@ -1,0 +1,19 @@
+Additional indicator used (downloaded 2026-10-20 from Data360, WB_ES)
+Download URL pattern: https://data360files.worldbank.org/data360-data/data/WB_ES/<CODE>.csv
+
+Role               | Code            | Indicator
+-------------------|-----------------|---------------------------------------------------------------
+Key X (corruption) | WB_ES_T_GRAFT3  | Bribery incidence (percent of firms experiencing at least one bribe payment request)
+
+Final variable set (9 WB_ES indicators + 1 dummy):
+  Y:        FIN14 (#167) % of firms with a bank loan/line of credit
+  X courts: BREADY_DISP3 (#271), CRIME9 (#347), DISP2 (#408)
+  X other:  GRAFT3 (bribery), FIN11 (#9, collateral)
+  Controls: FIN20 (#10, not needing a loan), WK21 (#162, firm size, logged), DISP1 (#410, any dispute)
+  Dummy:    CommonLaw (La Porta et al. 2008 legal origin, from dataset/external/qog_std_cs_jan22.csv, lp_legor == 1)
+
+CommonLaw hand-coded = 1 for economies missing from lp_legor (CIA World Factbook legal-system descriptions):
+ATG, BLZ, VCT, HKG, BRN, NAM, SSD, VUT. All other missing economies coded 0.
+
+Not used (moved to dataset/unused/): BREADY_FIN26 (#136), BREADY_DISP4 (#140), CAR1, T5, FIN7, FIN23, FIN13, FIN15,
+BREADY_DISP6, CORR11 (the last two were only used to check that DISP3 runs opposite to its label).
