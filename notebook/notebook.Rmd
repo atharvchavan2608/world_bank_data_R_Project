@@ -1,0 +1,904 @@
+---
+title: "Trust in Courts, Trust in Credit?"
+subtitle: "An econometrics notebook on institutions and business lending"
+output:
+  html_notebook:
+    toc: true
+    toc_depth: 2
+    toc_float:
+      collapsed: true
+      smooth_scroll: true
+    number_sections: true
+    code_folding: hide
+    self_contained: true
+    math_method: mathml
+    theme: default
+    highlight: textmate
+    css: notebook.css
+---
+
+```{r setup, include=FALSE}
+# Both the notebook and PDF appendix call the same audited analysis stages.
+# The directory switch only lasts for the build.
+project_root <- if (file.exists("AGENTS.md")) getwd() else normalizePath("..")
+knitr::opts_knit$set(root.dir = project_root)
+local({
+  previous <- getwd()
+  tryCatch({
+    setwd(project_root)
+    source("scripts/build.R", local = TRUE)
+    build_analysis(knitr::knit_global())
+  }, finally = setwd(previous))
+})
+
+knitr::opts_chunk$set(
+  echo = TRUE, message = FALSE, warning = TRUE,
+  fig.width = 8.2, fig.height = 4.1, fig.retina = 2,
+  out.width = "100%", collapse = TRUE, comment = "#>"
+)
+
+# Keep p-values legible and wide tables scrollable on small screens.
+tab <- function(x, caption, digits = 2) {
+  for (nm in intersect(names(x), c("p", "Court_p", "Bribe_p", "Classical_p", "HC3_p"))) {
+    x[[nm]] <- format.pval(x[[nm]], digits = max(3, digits), eps = .Machine$double.eps)
+  }
+  # Retain indicator codes while translating machine-readable table labels.
+  is_code <- grepl("^[A-Z0-9_]+$", names(x))
+  names(x)[!is_code] <- gsub("_", " ", names(x)[!is_code], fixed = TRUE)
+  names(x)[names(x) == "R2"] <- "R²"
+  markup <- knitr::kable(x, format = "html", row.names = FALSE, digits = digits,
+                        caption = caption, table.attr = 'class="research-table"')
+  knitr::asis_output(paste0('<div class="table-scroll" tabindex="0">',
+                           paste(markup, collapse = "\n"), '</div>'))
+}
+
+ink <- "#212638"
+muted <- "#565E70"
+burgundy <- "#812E43"
+blue <- "#2D6579"
+gold <- "#9A6C34"
+grid_col <- "#DFDBD5"
+plot_start <- function(panels = c(1, 1), margins = c(4.1, 4.4, 2.4, 0.8)) {
+  par(mfrow = panels, mar = margins, las = 1, family = "serif",
+      fg = ink, col.axis = muted, col.lab = ink, col.main = ink, bty = "l",
+      cex.axis = 0.9, cex.lab = 0.97, cex.main = 1.04, mgp = c(2.65, 0.7, 0))
+}
+f2 <- function(x) sprintf("%.2f", x)
+f3 <- function(x) sprintf("%.3f", x)
+interval <- function(lo, hi) sprintf("[%.2f, %.2f]", lo, hi)
+labels <- c(FIN14 = "Credit holding", BREADY_DISP3 = "Court doubt",
+            GRAFT3 = "Bribery incidence", WK21 = "Workers per firm",
+            log_workers = "Log workers", CRIME9 = "Courts an obstacle",
+            DISP2 = "Dispute resolution use", FIN11 = "Collateral required",
+            FIN20 = "No loan needed", DISP1 = "Commercial disputes",
+            common = "English common law", T5 = "Own website",
+            FIN23 = "Fully credit constrained")
+term_labels <- function(x) {
+  names_for_display <- unname(labels[x])
+  ifelse(is.na(names_for_display), x, names_for_display)
+}
+main_adjusted <- sensitivity[sensitivity$Model == "Region, cohort and websites", ]
+main_bribery <- core_effects[core_effects$Comparison == "Bribery incidence, 10 points", ]
+```
+
+<div class="notebook-kicker">MBA Econometrics · Research notebook</div>
+
+A business can need external finance and still be unable to obtain it. A lender can want to serve more businesses and still be reluctant to lend when recovering a debt is costly. Those two decisions meet in our outcome, the share of formal firms holding a loan or credit line. We use World Bank Enterprise Surveys to ask whether that share moves with court perceptions, exposure to bribery and the legal origin of company law.
+
+<div class="study-strip" aria-label="Study at a glance">
+  <div><strong>`r nrow(study)`</strong><span>economies in the core model</span></div>
+  <div><strong>`r nrow(known)`</strong><span>with an archived legal-origin code</span></div>
+  <div><strong>`r f2(main_bribery$Estimate)` pp</strong><span>core bribery association for a 10-point rise</span></div>
+  <div><strong>`r f2(main_adjusted$Bribery)` pp</strong><span>with geography, cohort and website adoption</span></div>
+</div>
+
+Use the contents to move through the analysis. **Show** reveals the R behind an exhibit, and the **Code** menu controls all chunks at once. Estimates are live calculations from the archived inputs.
+
+<details class="mobile-contents">
+<summary>Contents</summary>
+<nav aria-label="Notebook contents">
+<ol>
+<li><a href="#the-lending-question">The lending question</a></li>
+<li><a href="#build-the-cross-section">Build the cross-section</a></li>
+<li><a href="#explore-before-fitting">Explore before fitting</a></li>
+<li><a href="#fit-the-first-regression">Fit the first regression</a></li>
+<li><a href="#extend-the-model">Extend the model</a></li>
+<li><a href="#test-the-claims">Test the claims</a></li>
+<li><a href="#diagnose-the-model">Diagnose the model</a></li>
+<li><a href="#challenge-the-result">Challenge the result</a></li>
+<li><a href="#draw-conclusions-from-the-chain-of-evidence">Draw conclusions</a></li>
+</ol>
+</nav>
+</details>
+
+# The lending question
+
+## What would connect courts, bribery and credit?
+
+A bank cares about whether a claim can be enforced, how long recovery takes and what can be recovered. The survey observes what firm managers say about impartiality. These views might contain information about enforcement, and they might also reflect difficult experiences, expectations or who encounters the courts. In related work, Visaria studies the staggered introduction of debt recovery tribunals in India and finds changes in delinquency and interest rates on larger loans. That design uses variation in the timing and applicability of a reform. Here we compare economy-level survey aggregates. [Visaria, *American Economic Journal: Applied Economics*](https://www.aeaweb.org/articles?id=10.1257/app.1.3.59)
+
+<div class="flow-diagram" role="group" aria-label="Possible lending and confounding channels">
+  <div><b>Institutional exposure</b><span>Court perceptions and bribe requests during public transactions</span></div><i aria-hidden="true">→</i>
+  <div><b>Possible mechanisms</b><span>Recovery risk, operating costs and incentives to apply for credit</span></div><i aria-hidden="true">→</i>
+  <div><b>Observed outcome</b><span>Share of firms holding a loan or line of credit</span></div>
+</div>
+
+<aside class="margin-note"><b>A confounding route</b><p>Income, banking development and state capacity can move both institutional indicators and credit holding. Credit conditions can also change how firms operate and what they report. The arrows above are hypotheses about mechanisms. The regression estimates how the aggregates move together.</p></aside>
+
+Legal origin asks a different question from measured court perceptions. It classifies the historical origin of company law or the commercial code. Colonial history and other persistent economic differences can overlap with the classification, so a difference by origin has several possible explanations. [Klerman et al., *Journal of Legal Analysis*](https://doi.org/10.1093/jla/lar002)
+
+## What does each row and variable represent?
+
+The survey samples eligible establishments in formal nonagricultural sectors. The World Bank uses firm-level survey weights to report national indicators. Here one observation represents one **economy at one survey wave**, and OLS gives every economy the same weight. An estimated difference of five percentage points concerns the share of firms in otherwise comparable observed economies. It cannot tell us how the probability for an individual firm would change if that firm's exposure changed. [World Bank survey methodology](https://www.enterprisesurveys.org/en/methodology)
+
+```{r variable-map}
+# Use descriptive names to keep a percentage, an index, and a dummy distinct.
+dictionary <- data.frame(
+  Code = c("FIN14", "BREADY_DISP3", "GRAFT3", "WK21", "common", "CRIME9", "DISP2",
+           "FIN11", "FIN20", "DISP1", "FIN23", "T5"),
+  Measure = c("Loan or line from a financial institution", "Disagreement about court independence and impartiality",
+              "At least one bribe request in the covered public transactions", "Average permanent full-time-equivalent employment",
+              "English common-law origin", "Courts rated a major or very severe obstacle",
+              "Use of courts, arbitration, mediation or conciliation among firms reporting a dispute",
+              "Collateral required on the latest loan or line among borrowing firms",
+              "Sufficient funds reported as the reason for not applying", "Firms reporting commercial disputes",
+              "Firms classified as fully credit constrained", "Firms with their own website"),
+  Scale = c("% of firms", "0–100 index", "% of firms", "Workers, then log",
+            "0 / 1 where coded", "% of firms", "% within eligible group", "% within eligible group",
+            "% of firms", "% of firms", "% of firms", "% of firms"),
+  Use = c("Outcome", "Core court measure", "Core bribery measure", "Core control",
+          "Legal-origin extension", "Alternative court measure", "Pitch extension",
+          "Pitch extension", "Pitch extension", "Pitch extension",
+          "Alternative outcome", "Development sensitivity")
+)
+tab(dictionary, "Measurement map · archived World Bank indicators and the QoG classification")
+```
+
+FIN14 is a stock measured at the survey. It can reflect borrowing demand, approval, the duration of loans and decisions made in earlier years. GRAFT3 concerns bribe requests in specified public transactions, with refusals coded as positive in the published indicator. It gives us a measure of firms' operating environment. The data do not tell us that a lender requested a bribe. [World Bank indicator descriptions](https://www.enterprisesurveys.org/content/dam/enterprisesurveys/documents/methodology/Indicator-Description.pdf)
+
+# Build the cross-section
+
+## Find the national row
+
+Data360 stores one observation per indicator and **dimension combination**. For the same year and economy, there can be a national figure, exporter figures and figures for other subsets. These subsets can overlap. A simple mean of the published rows would silently substitute a different population for the national aggregate.
+
+```{r raw-rows}
+# Read dimension codes as text. The raw observations remain untouched.
+raw_credit <- read.csv(raw_files[["FIN14"]], colClasses = "character",
+                       fileEncoding = "UTF-8-BOM", check.names = FALSE)
+
+# A national row has "_T" in all six relevant dimensions at once.
+is_national <- Reduce("&", lapply(raw_credit[total_dimensions], function(x) {
+  !is.na(x) & x == "_T"
+}))
+example <- subset(raw_credit, REF_AREA == "AFG" & TIME_PERIOD == "2008")
+first_rows <- head(example[c("REF_AREA", "TIME_PERIOD", "COMP_BREAKDOWN_3",
+                             "COMP_BREAKDOWN_3_LABEL", "OBS_VALUE")], 4)
+names(first_rows) <- c("Economy", "Wave", "Breakdown code", "Breakdown", "Reported %")
+first_rows[["Reported %"]] <- as.numeric(first_rows[["Reported %"]])
+tab(first_rows, "A raw FIN14 example · national and subgroup rows")
+
+# Check the teaching filter against the audited production selection.
+stopifnot(sum(is_national) == nrow(national[["FIN14"]]))
+```
+
+The pipeline checks normal status, unit multiplier, period format and uniqueness among the selected rows. A duplicate at the economy–year level would require a data decision before a join. It would be unsafe to keep the first row or let an ambiguous merge multiply observations.
+
+```{r national-audit}
+# Raw versus national row counts show what the filter does across indicators.
+audit_columns <- c("code", "rows", "national", "observed", "first", "last")
+audit_display <- source_audit[match(pitch_codes, source_audit$code), audit_columns]
+names(audit_display) <- c("Code", "Raw rows", "National rows", "Values", "First wave", "Last wave")
+tab(audit_display, "Coverage of the pitch indicators before aligning waves", digits = 0)
+```
+
+## Join on economy and wave
+
+`REF_AREA` identifies the economy and `TIME_PERIOD` provides the wave-year key in this archive. The join needs both. Joining on the economy alone could attach an older observation of credit to a newer observation of court doubt. The audited build first lays out the union of economy–year keys, then merges the national indicator values. The latest observed FIN14 wave anchors the cross-section. The latest wave in the union provides a separate check that the anchor does not skip a newer archived observation for an economy.
+
+<div class="flow-diagram" role="group" aria-label="Data construction stages">
+  <div><b>Filter</b><span>All six breakdown codes equal <code>_T</code></span></div><i aria-hidden="true">→</i>
+  <div><b>Align</b><span>One row per economy and wave year</span></div><i aria-hidden="true">→</i>
+  <div><b>Select</b><span>Latest observed credit wave, then apply the recent-wave cutoff</span></div>
+</div>
+
+```{r same-wave-example}
+# Show the ordered Ghana history, including waves with no DISP3 observation.
+ghana <- panel[panel$economy == "GHA", c("year", "FIN14", "BREADY_DISP3", "GRAFT3")]
+ghana$Selected <- ifelse(ghana$year == study$year[study$economy == "GHA"], "Core wave", "")
+tab(ghana, "One economy through the join · Ghana (GHA)")
+stopifnot(!anyDuplicated(panel[c("economy", "year")]), !anyDuplicated(study$economy))
+```
+
+The check finds **`r nrow(wave_disagreements)`** differences between the two latest-wave rules. The cutoff retains surveys from 2021 onward. Older surveys offer additional coverage for some variables, but the court-impartiality series and survey instruments have a narrower comparable time span. Even within the recent sample, survey vintage can matter. Cohort indicators and more recent cutoffs come back as sensitivity checks.
+
+## Account for what drops out
+
+```{r coverage}
+# QoG coverage affects the legal-origin estimates. The core sample is broader.
+tab(coverage, "Sample accounting · alternative coverage rules", digits = 0)
+```
+
+```{r missingness-by-period}
+# Count blanks after the wave join so a zero never masquerades as a missing cell.
+audit_vars <- c(pitch_codes, "FIN23", "T5", "common")
+missing_counts <- function(data) colSums(is.na(data[audit_vars]))
+tab(data.frame(Measure = term_labels(audit_vars),
+               Earlier = unname(missing_counts(subset(anchor, year < 2021))),
+               Recent = unname(missing_counts(study))),
+    "Missing observations at the latest wave by vintage group", digits = 0)
+```
+
+```{r vintage-chart, fig.alt="Bar chart showing the number of economies in the recent sample, by survey year."}
+vintages <- table(study$year)
+old <- plot_start(margins = c(4, 4.6, 2.2, 1))
+bars <- barplot(vintages, col = blue, border = NA, ylim = c(0, max(vintages) * 1.18),
+                ylab = "Economies", xlab = "Survey year", main = "Composition of the recent-wave sample")
+text(bars, vintages, labels = vintages, pos = 3, col = ink, cex = 0.85)
+par(old)
+```
+
+```{r coverage-comparison}
+tab(profiles, "Observable differences between included and excluded groups")
+```
+
+Earlier-wave economies differ in observed credit holding. Legal-code availability produces another kind of exclusion. Similar mean credit between classified and unclassified economies does not imply similar geography, institutional history or exposure. Comparing models with and without the legal-origin dummy on the **same classified sample** helps separate the contribution of the new variable from the shift in sample composition.
+
+## Verify the sign and reproduce the pitch
+
+The indicator title refers to independence and impartiality. The current survey construction assigns low scores to agreement and high scores to disagreement. This is why the notebook calls the regressor **court doubt**. To report the slope in terms of court confidence instead, define confidence as `100 - BREADY_DISP3`. With an intercept that reverses the slope and leaves fitted values unchanged. A negative slope for doubt would therefore be consistent with a positive association for confidence. [World Bank indicator descriptions, DISP3](https://www.enterprisesurveys.org/content/dam/enterprisesurveys/documents/methodology/Indicator-Description.pdf)
+
+```{r orientation}
+direction_example <- merge(direction_values, unique(study[c("economy", "name")]),
+                           by = "economy", sort = FALSE)
+tab(direction_example[c("name", "year", "BREADY_DISP3", "CRIME9", "BREADY_DISP6")],
+    "A check on orientation · court doubt and two court-obstacle measures")
+```
+
+```{r pitch-reconciliation}
+# Rows where the rebuilt value rounds differently at the printed precision.
+tab(pitch_differences, "Differences from the pitch's displayed precision", digits = 5)
+```
+
+The country examples and correlations later in the notebook check plausibility. The coding documentation determines the direction. The pitch reconciliation exposes rounding as well as coverage. The two printed discrepancies can be reproduced by rounding first to two decimal places and then to the displayed precision. The original calculation is unavailable.
+
+# Explore before fitting
+
+## Distributions, units and unusual economies
+
+Use the count, center, dispersion and range together. The mean describes the average economy. The median reflects the middle economy and is less affected by extreme values. Quartiles show how much of an apparent range is populated. Check the tails before fitting because an unusual regressor can exert leverage even when its credit share looks ordinary.
+
+```{r descriptive-table}
+# Summaries reflect the economy-level sample; the SD is the ordinary sample SD.
+distribution <- function(x) {
+  x <- x[is.finite(x)]
+  quartiles <- unname(quantile(x, c(0.25, 0.75)))
+  c(N = length(x), Mean = mean(x), SD = sd(x), Min = min(x), Q1 = quartiles[1],
+    Median = median(x), Q3 = quartiles[2], Max = max(x))
+}
+descriptive <- t(vapply(study[c(pitch_codes, "log_workers")], distribution, numeric(8)))
+tab(data.frame(Measure = term_labels(rownames(descriptive)), descriptive, row.names = NULL),
+    "Distribution of the same-wave measures")
+```
+
+```{r primary-distributions, fig.height=6.5, fig.alt="Histograms for credit holding, court doubt, bribery incidence, and average employment. Employment is strongly right-skewed."}
+old <- plot_start(c(2, 2))
+draw_hist <- function(values, label, measure, color, breaks = "Sturges") {
+  hist(values, breaks = breaks, col = color, border = "white",
+       main = label, xlab = measure, ylab = "Economies")
+  abline(v = median(values), col = ink, lwd = 2, lty = 2)
+}
+draw_hist(study$FIN14, "Credit holding", "Percent of eligible firms", blue)
+draw_hist(study$BREADY_DISP3, "Court doubt", "Index points", burgundy)
+draw_hist(study$GRAFT3, "Bribery incidence", "Percent of firms", burgundy)
+draw_hist(study$WK21, "Average employment", "Workers per firm", blue)
+par(old)
+```
+
+Dashed lines mark the sample medians. Average employment has a long right tail. A natural log compresses the upper end and lets us ask about proportional size differences. For example, doubling average employment is an increase of $\log(2)$ on the transformed scale. Using logs is a modeling choice about the mean relationship. A later refit in levels tests whether this choice drives the institution estimates.
+
+```{r employment-log, fig.alt="Side-by-side histograms of employment in levels and logs, showing the shorter right tail on the log scale."}
+old <- plot_start(c(1, 2))
+draw_hist(study$WK21, "Workers per firm", "Original units", blue)
+draw_hist(study$log_workers, "Log workers per firm", "Natural log units", blue)
+par(old)
+```
+
+```{r employment-shape}
+tab(workers_form, "Workforce skewness before and after the log transformation")
+```
+
+## Look for co-movement
+
+Pearson correlation summarizes linear co-movement. Spearman correlation compares ranks and reduces sensitivity to the distance of an extreme data point from the rest. Both here are bivariate. Neither controls for the other institution measure or firm size. A change in the estimate after adding covariates is possible even if the raw trend appears stable.
+
+```{r correlation-audit}
+# Compare like with like by using all four variables on the complete core sample.
+eda_codes <- c("FIN14", "BREADY_DISP3", "GRAFT3", "log_workers")
+eda <- study[eda_codes]
+names(eda) <- term_labels(eda_codes)
+r_pearson <- cor(eda)
+r_spearman <- cor(eda, method = "spearman")
+tab(data.frame(Measure = names(eda)[-1], Pearson = unname(r_pearson[-1, 1]),
+               Spearman = unname(r_spearman[-1, 1])),
+    "Raw correlations with credit holding", digits = 3)
+```
+
+```{r correlation-grid, fig.width=7.4, fig.height=5.1, fig.alt="Correlation matrix for credit holding, court doubt, bribery incidence, and log employment. Bribery has a negative correlation with credit."}
+# Use the same fixed color scale across all cells, including the diagonal.
+old <- plot_start(margins = c(5, 9, 1.3, 1.2))
+k <- nrow(r_pearson)
+palette <- colorRampPalette(c("#2D6579", "#F7F3ED", "#812E43"))(101)
+image(seq_len(k), seq_len(k), t(r_pearson[k:1, ]), col = palette,
+      zlim = c(-1, 1), axes = FALSE, xlab = "", ylab = "")
+axis(1, at = seq_len(k), labels = c("Credit", "Court doubt", "Bribery", "Log workers"), tick = FALSE)
+axis(2, at = seq_len(k), labels = rev(rownames(r_pearson)), tick = FALSE)
+for (i in seq_len(k)) for (j in seq_len(k)) {
+  val <- r_pearson[k + 1L - j, i]
+  text(i, j, f2(val), col = if (abs(val) > 0.65) "white" else ink, cex = 1.04)
+}
+par(old)
+```
+
+```{r raw-relationships, fig.alt="Scatterplots of loan holding against court doubt and bribery incidence, with fitted OLS lines and descriptive smoothers."}
+old <- plot_start(c(1, 2))
+for (feature in c("BREADY_DISP3", "GRAFT3")) {
+  x <- study[[feature]]
+  y <- study$FIN14
+  plot(x, y, pch = 16, cex = 0.7, col = adjustcolor(blue, alpha.f = 0.64),
+       xlab = term_labels(feature), ylab = "Credit holding (%)",
+       main = term_labels(feature))
+  abline(lm(y ~ x), col = burgundy, lwd = 2.1)
+  lines(lowess(x, y), col = gold, lwd = 1.7, lty = 2)
+}
+par(old)
+```
+
+The straight lines are separate raw OLS fits. The dashed curves are local smoothers that can reveal curvature or sparse tails. They are exploratory visual summaries. A nearly flat court line leads to a question about weak fit, uncertainty and whether comparison on the observed covariates changes the picture.
+
+
+## Compare regional profiles
+
+Each row below describes the average **economy** in a region. The group means are useful for seeing why a pooled association can differ from a within-region comparison. Regions can differ simultaneously in credit, firm composition and institutional exposure. Some groups contain few economies, and the legal-code coverage also varies. Treat a regional mean as an observed group description.
+
+```{r regional-profiles}
+# Preserve the economy as the unit when calculating region summaries.
+regional_means <- aggregate(study[c("FIN14", "BREADY_DISP3", "GRAFT3")],
+                            by = list(Region = study$region), FUN = mean)
+region_ref <- unique(regions[c("region", "region_label")])
+counts <- region_counts[match(regional_means$Region, region_counts$Region), ]
+regional_means$Region <- region_ref$region_label[match(regional_means$Region, region_ref$region)]
+regional_means$N <- counts$Recent
+regional_means[["QoG origin known"]] <- counts$Recent - counts$QoG_missing
+names(regional_means)[2:4] <- c("Credit holding", "Court doubt", "Bribery incidence")
+tab(regional_means[c("Region", "N", "Credit holding", "Court doubt",
+                     "Bribery incidence", "QoG origin known")],
+    "Regional averages and legal-origin coverage in the recent sample")
+```
+
+# Fit the first regression
+
+## From a population relationship to sample estimates
+
+Let $Y_i$ be FIN14 in percentage points and $D_i$ be court doubt in index points. A linear **population regression function** specifies a conditional mean
+
+$$
+E[Y_i \mid D_i] = \alpha + \beta D_i.
+$$
+
+The stochastic equation is $Y_i=\alpha+\beta D_i+u_i$. The disturbance $u_i$ collects differences in economy conditions left out of the equation, survey measurement error and deviations from the conditional mean. Individual economies can lie above or below the line. The residual $\hat u_i=Y_i-\hat Y_i$ is the deviation from the **fitted sample line**. It is observable after fitting. The population disturbance is unobserved.
+
+<div class="table-scroll" tabindex="0">
+<table class="research-table">
+<caption>Classical linear regression assumptions and where they matter</caption>
+<thead><tr><th scope="col">Assumption</th><th scope="col">Why we need it</th><th scope="col">What to check here</th></tr></thead>
+<tbody>
+<tr><td>Linear in the coefficients</td><td>Defines the OLS form. Transformations such as log employment can enter as regressors.</td><td>Scatterplots, residual plots, a fitted-powers test and a bounded model.</td></tr>
+<tr><td>Variation and full column rank</td><td>We need unique slope estimates. Exact collinearity prevents identifying separate slopes.</td><td>Check the design rank. Inspect correlations and VIF for near redundancy.</td></tr>
+<tr><td>Zero conditional mean, $E[u_i\mid X_i]=0$</td><td>With an appropriate sampling model, the equation estimates the specified conditional mean without systematic omitted shifts.</td><td>National income and banking conditions are plausible omissions. No residual test can establish this assumption.</td></tr>
+<tr><td>Sampling and generalization</td><td>A population interpretation requires a sampling or outcome model for the observed economies.</td><td>The archive contains available survey waves. Its coverage does not constitute a random draw of all economies or years.</td></tr>
+<tr><td>Independent economy errors and constant conditional variance</td><td>Support the classical covariance formula and efficiency result under the other assumptions.</td><td>Use HC3 for uneven variance. Probe regional dependence separately because HC3 allows uneven variances across independent observations.</td></tr>
+<tr><td>Normal errors conditional on the design</td><td>With the other classical conditions, yields exact finite-sample t and F reference distributions.</td><td>The HC3 tests use approximate references. We make no claim of exact normality in these data.</td></tr>
+</tbody>
+</table>
+</div>
+
+Under suitable sampling and finite moments, OLS can describe the best linear projection even when the conditional mean curves. The interpretation remains an economy-level association. Also, least squares with an intercept constrains the fitted residuals to sum to zero and to be orthogonal to included regressors. Those algebraic properties supply no evidence about whether population errors are independent of the regressors.
+
+## Compute OLS by hand and with R
+
+The fitted coefficients minimize $\sum_i (Y_i-\alpha-\beta D_i)^2$. In simple regression the slope is the sample covariance of $Y$ with $D$ divided by the sample variance of $D$. The intercept places the line through the sample means.
+
+$$
+\hat\beta=\frac{\sum_i (D_i-\bar{D})(Y_i-\bar{Y})}{\sum_i (D_i-\bar{D})^2},
+\qquad
+\hat\alpha=\bar{Y}-\hat\beta\bar{D}.
+$$
+
+```{r simple-ols}
+# Compute the estimates directly from the centered cross-products.
+d <- study$BREADY_DISP3
+y <- study$FIN14
+b <- sum((d - mean(d)) * (y - mean(y))) / sum((d - mean(d))^2)
+a <- mean(y) - b * mean(d)
+
+# Fit the same sample with R and verify agreement with the production model.
+simple_fit <- lm(FIN14 ~ BREADY_DISP3, data = study, na.action = na.fail)
+stopifnot(isTRUE(all.equal(c(a, b), unname(coef(simple_fit)))),
+          isTRUE(all.equal(coef(simple_fit), coef(models$Simple))))
+tab(data.frame(Term = c("Intercept", "Court doubt"),
+               Manual = c(a, b), R = unname(coef(simple_fit))),
+    "Verifying the two simple-regression coefficients", digits = 4)
+```
+
+```{r simple-fit-geometry, fig.alt="Scatterplot with the simple OLS fit and three vertical residual segments. The fitted line falls slightly as court doubt rises."}
+old <- plot_start()
+plot(d, y, pch = 16, col = adjustcolor(blue, alpha.f = 0.64), cex = 0.75,
+     xlab = "Court doubt (index points)", ylab = "Credit holding (%)",
+     main = "OLS minimizes squared vertical distances")
+abline(simple_fit, col = burgundy, lwd = 2.45)
+# Label three widely spaced observations to illustrate signed residuals.
+i <- order(d)[round(quantile(seq_along(d), c(0.2, 0.5, 0.8)))]
+segments(d[i], fitted(simple_fit)[i], d[i], y[i], col = gold, lwd = 2)
+points(d[i], y[i], pch = 19, col = gold, cex = 0.85)
+text(d[i], y[i], study$economy[i], pos = 3, cex = 0.75, col = ink)
+par(old)
+```
+
+The fitted slope is **`r sprintf("%.3f", b)` percentage points per index point**. A ten-point difference in doubt corresponds to **`r f2(10 * b)` points** of fitted credit holding. The intercept is the fitted share at zero doubt, the index's agreement endpoint. The slope is an average linear comparison over the observed range.
+
+## Read $R^2$ and adjusted $R^2$
+
+The total sum of squares is the variation around the outcome mean, $TSS=\sum_i (Y_i-\bar Y)^2$. OLS with an intercept decomposes it into explained and residual sums of squares. $R^2=1-RSS/TSS$ reports the fraction accounted for by the fitted line in this sample. Adding regressors on the same rows can only lower $RSS$. Adjusted $R^2$ compares residual and total *mean* squares, using $n-p-1$ and $n-1$ degrees of freedom, respectively, with $p$ slopes.
+
+```{r decompose-fit}
+# Compute the two fit measures explicitly and check summary.lm.
+tss <- sum((y - mean(y))^2)
+rss <- deviance(simple_fit)
+manual_r2 <- 1 - rss / tss
+manual_adj <- 1 - (rss / df.residual(simple_fit)) / (tss / (length(y) - 1))
+stopifnot(isTRUE(all.equal(manual_r2, summary(simple_fit)$r.squared)),
+          isTRUE(all.equal(manual_adj, summary(simple_fit)$adj.r.squared)))
+tab(data.frame(Total = tss, Explained = tss - rss, Residual = rss,
+               R2 = manual_r2, Adjusted_R2 = manual_adj),
+    "Simple-model variation and fit", digits = 4)
+```
+
+Court doubt alone accounts for about **`r sprintf("%.2f%%", 100 * manual_r2)`** of the between-economy credit variation. The slightly negative adjusted statistic reflects the degrees-of-freedom penalty on a very small fit gain. Both measures describe in-sample fit and cannot establish a causal model.
+
+# Extend the model
+
+## What does “holding the other variables fixed” mean?
+
+Add bribery incidence $B_i$ and the natural log of average employment $W_i$ to the same economies. $W_i$ is measured in workers before transformation.
+
+$$
+Y_i=\alpha+\beta_D D_i+\beta_B B_i+\theta\log(W_i)+u_i.
+$$
+
+$\beta_D$ is a one-point court-doubt comparison at the same reported bribery and average employment. $\beta_B$ holds court doubt and log employment fixed. When average employment doubles, $\log(W)$ changes by $\log(2)$ and the fitted share changes by $\theta\log(2)$. The firm-size control describes a difference across economies with different average employment. The unit still cannot identify an individual firm's credit probability.
+
+```{r core-fit}
+# Keeping the same row set separates changes in the specification from attrition.
+core_fit <- lm(FIN14 ~ BREADY_DISP3 + GRAFT3 + log_workers, data = study,
+               na.action = na.fail)
+stopifnot(identical(rownames(model.frame(simple_fit)), rownames(model.frame(core_fit))),
+          isTRUE(all.equal(coef(core_fit), coef(core))))
+fit_overview <- model_fit[c("Model", "N", "Slopes", "R2", "Adjusted_R2")]
+fit_overview[["Residual df"]] <- fit_overview$N - fit_overview$Slopes - 1
+tab(fit_overview, "Specification ladder · read fit changes within the same sample", digits = 3)
+```
+
+On the same **`r nobs(core_fit)` economies**, the core accounts for `r sprintf("%.1f%%", 100 * summary(core_fit)$r.squared)` of the observed variation, compared with `r sprintf("%.2f%%", 100 * manual_r2)` for the simple line. Its adjusted share is `r sprintf("%.1f%%", 100 * summary(core_fit)$adj.r.squared)`. The gains show that the added variables account for more variation in the sample even after the fit penalty. The estimates still need tests and sensitivity checks to support an institutional interpretation.
+
+### See the partial slope directly
+
+The Frisch–Waugh–Lovell result gives a visual interpretation. First remove the fitted contribution of bribery and log employment from both credit and court doubt. Then regress residual credit on residual doubt. Its slope equals the court slope in the full core model. This exercise shows how the conditional comparison is constructed.
+
+```{r partial-regression, fig.alt="Residualized credit holding plotted against residualized court doubt after controlling for bribery and log employment."}
+# Residualize both variables against exactly the same controls and sample.
+remaining_credit <- residuals(lm(FIN14 ~ GRAFT3 + log_workers, data = study))
+remaining_doubt <- residuals(lm(BREADY_DISP3 ~ GRAFT3 + log_workers, data = study))
+partial_line <- lm(remaining_credit ~ remaining_doubt)
+stopifnot(isTRUE(all.equal(unname(coef(partial_line)[2]), unname(coef(core_fit)["BREADY_DISP3"]))))
+
+old <- plot_start()
+plot(remaining_doubt, remaining_credit, pch = 16, cex = 0.75,
+     col = adjustcolor(blue, alpha.f = 0.6), xlab = "Court doubt after projecting out controls",
+     ylab = "Credit holding after projecting out controls", main = "The partial court-doubt slope")
+abline(h = 0, v = 0, lty = 2, col = grid_col)
+abline(partial_line, col = burgundy, lwd = 2.2)
+par(old)
+```
+
+The core court slope is **`r f3(coef(core_fit)["BREADY_DISP3"])`**. Its direction differs from the simple slope. The point estimate changes because the residualized comparison uses a different component of the same court measure. The change alone cannot establish which specification removes omitted-variable bias. Controls can alter a coefficient because they account for confounding, because they condition on a mechanism, or because of sampling noise. Uncertainty matters when both estimates are small.
+
+## Add a legal-origin dummy carefully
+
+The archived QoG series `lp_legor` classifies the origin of company law or the commercial code. Use $L_i=1$ for documented English common law, $L_i=0$ for documented comparison origins and leave unavailable values missing. The primary pooled comparator includes the Socialist category. The stricter civil-code comparison retains only English, French, German and Scandinavian origins. The coding of mixed systems and the pitch's imputation rule are sensitivity questions. [QoG legal-origin definition](https://datafinder.qog.gu.se/variable/lp_legor)
+
+```{r legal-origin-coding}
+# These counts refer to the archived codes on the recent-wave sample.
+tab(origin_counts, "Legal-origin categories before defining the comparison group", digits = 0)
+```
+
+```{r origin-missingness}
+# A matched record with a blank classification differs from an unmatched economy code.
+tab(data.frame(Status = c("QoG record found, origin blank", "No matching QoG economy code"),
+               N = c(sum(origin_audit$origin_row), sum(!origin_audit$origin_row))),
+    "Why recent-wave legal codes are missing", digits = 0)
+```
+
+With a dummy and common slopes, changing $L$ from zero to one shifts the fitted intercept by $\delta$. To see this in R, predict twice at the same values of the other covariates. These are fitted profiles for comparing origins. They do not describe a real economy changing its legal heritage.
+
+```{r dummy-interpretation}
+# Fix the same covariates twice and vary only the legal-origin indicator.
+reference <- data.frame(
+  BREADY_DISP3 = mean(known$BREADY_DISP3),
+  GRAFT3 = mean(known$GRAFT3),
+  log_workers = mean(known$log_workers),
+  common = c(0, 1)
+)
+profile_fits <- predict(origin_fit, newdata = reference)
+stopifnot(isTRUE(all.equal(unname(diff(profile_fits)), unname(coef(origin_fit)["common"]))))
+tab(data.frame(Origin = c("Other documented origin", "English common law"),
+               Adjusted_credit = unname(profile_fits)),
+    "Fitted credit at the same court, bribery and employment values")
+```
+
+```{r origin-comparators}
+# Use the HC3 intervals from the anchored origin comparisons.
+origin_rows <- origin_sensitivity[1:2, ]
+tab(origin_rows, "Conditional differences by English common-law origin", digits = 3)
+```
+
+Both intervals span zero and also allow sizable differences. The full pitch set is informative as a specification check. Use of dispute resolution is measured in the group that reports disputes. Collateral is measured among borrowers, and lack of need is a reported reason for skipping an application. Including these measures can condition on selection or a lending mechanism. A higher adjusted $R^2$ for the pitch model on the same QoG rows can be real as a gain in fit while leaving those concerns intact.
+
+# Test the claims
+
+## Individual tests and economic magnitudes
+
+For court doubt, bribery and the dummy, the two-sided null is $H_0:\beta_j=0$ and the alternative is $H_1:\beta_j\ne 0$. Costly recovery and public transactions motivate negative expectations for doubt and bribery. The legal-origin hypothesis predicts a positive common-law comparison. Inference uses both tails. The t statistic is $\hat\beta_j/SE(\hat\beta_j)$ under the zero null. The p-value uses the reference probability of observing a statistic at least as far from zero as ours, conditional on the null and the inference assumptions. The 95% interval adds and subtracts a critical multiple of the standard error. If it spans zero, the corresponding two-sided test does not reject at 5%. It can still contain policy-relevant differences.
+
+```{r inference-units}
+# A scaled contrast rescales the slope AND its standard error and interval.
+# Exclude the standardized comparisons here so each row has business units.
+teaching_effects <- core_effects[1:3, c("Comparison", "Estimate", "SE", "t", "df", "p", "Lower", "Upper")]
+tab(teaching_effects, "Core t tests in interpretable credit-share units · HC3", digits = 3)
+```
+
+In the core model a ten-point rise in bribery is associated with **`r f2(abs(main_bribery$Estimate))` points lower** credit holding. The interval excludes zero. For court doubt the interval includes zero and both signs. For a business interpretation of any coefficient, report the unit, what was held fixed and how large the interval is. A small p-value alone cannot rank two predictors or show that a reform would pay off.
+
+## F tests answer a different question
+
+The classical test compares a restricted model with a less restricted model on identical rows. For example, the simple model imposes zero coefficients on bribery and log employment. The extra-sum-of-squares F statistic divides the reduction in residual variation per restriction by the full model's residual mean square. The robust Wald version instead evaluates the restrictions with an HC3 covariance matrix. The study uses the number of restrictions and the full model's residual degrees of freedom as approximate F references for the robust test.
+
+```{r nested-f}
+# H0: bribery and log employment both have zero slopes, given court doubt.
+nested <- anova(simple_fit, core_fit)
+tab(data.frame(Restrictions = nested$Df[2], F = nested$F[2], p = nested[["Pr(>F)"]][2]),
+    "Classical nested test · add bribery and size to the simple model", digits = 3)
+```
+
+```{r joint-f}
+# Overall H0: all core slopes are zero.
+# Institutions H0: the court and bribery slopes are zero, conditional on size.
+test_rows <- subset(joint_results, Model == "Core", select = -Model)
+tab(test_rows, "Overall and institutional joint tests on the core sample", digits = 3)
+```
+
+The institutional F statistic can be significant because one institutional measure carries most of the information. It provides no test that both slopes are individually different from zero. With a single restriction and the same covariance, $F=t^2$, so the simple-model slope provides a useful consistency check.
+
+```{r single-f}
+# Scale the effect and its interval to 10 court-doubt points.
+simple_t <- linear_test(simple_fit, c(BREADY_DISP3 = 10))
+single_f <- block_test(simple_fit, "BREADY_DISP3")
+stopifnot(isTRUE(all.equal(unname(simple_t["t"]^2), unname(single_f["F"]))))
+tab(data.frame(Estimate_pp = unname(simple_t["Estimate"]),
+               HC3_interval = interval(simple_t["Lower"], simple_t["Upper"]),
+               t = unname(simple_t["t"]), F = unname(single_f["F"]), p = unname(single_f["p"])),
+    "Simple-model court comparison per ten points · one-restriction F and t", digits = 3)
+```
+
+## Do the institutional associations differ?
+
+An index point of court doubt and a percentage point of bribery incidence are distinct units. Use one sample standard deviation of each adverse exposure to compare their signed slopes. Denote their SDs by $s_D$ and $s_B$. The signed difference $\Delta=s_D\beta_D-s_B\beta_B$ is a single linear contrast. Test $H_0:\Delta=0$ against $H_1:\Delta\ne0$. Its variance uses the two slope variances **and their covariance**.
+
+$$
+\operatorname{Var}(\hat\Delta)=s_D^2\operatorname{Var}(\hat\beta_D)
++s_B^2\operatorname{Var}(\hat\beta_B)
+-2s_Ds_B\operatorname{Cov}(\hat\beta_D,\hat\beta_B).
+$$
+
+```{r standardized-contrast}
+# Hold the sample SDs fixed and apply the joint HC3 covariance.
+weights <- c(BREADY_DISP3 = sd(study$BREADY_DISP3), GRAFT3 = -sd(study$GRAFT3))
+delta <- linear_test(core_fit, weights)
+standardized <- core_effects[4:6, c("Comparison", "Estimate", "Lower", "Upper", "p")]
+stopifnot(isTRUE(all.equal(unname(delta["Estimate"]), standardized$Estimate[3])))
+tab(standardized, "Adverse one-SD comparisons and the signed difference", digits = 3)
+```
+
+A difference between two signed slopes is a separate question from a difference in their absolute magnitudes. For the latter, an exploratory test asks whether $s_B\beta_B < -|s_D\beta_D|$. This requires the court-minus-bribery contrast to be positive **and** the court-plus-bribery contrast to be negative. The larger one-sided p-value is `r format.pval(bribe_magnitude_p, digits = 3)` in the core sample. Partial $R^2$ helps describe how much residual variation each predictor accounts for when added to the other terms.
+
+```{r partial-fit}
+tab(partial_fit, "Incremental fit from adding each predictor to the other core terms", digits = 4)
+```
+
+<div class="takeaway"><b>What the core model says</b><p>Bribery has the larger adverse standardized association in this specification. The court coefficient remains imprecise. The comparison is conditional on the particular measures, sample and covariates. The next checks ask how credible that description is under different assumptions.</p></div>
+
+
+# Diagnose the model
+
+## Unequal error variance and the HC3 correction
+
+Some survey aggregates are noisier than others. Credit differences across economies of similar observed characteristics can also have different spreads. The **studentized Breusch–Pagan test** asks whether the conditional error variance is constant versus related to the regressors in its auxiliary equation. Regress squared OLS residuals on the original covariates and compare $nR_{\mathrm{aux}}^2$ with a chi-square reference with one degree of freedom per slope. This version uses a studentized statistic for the variance test. [Koenker, *Journal of Econometrics*](https://doi.org/10.1016/0304-4076%2881%2990062-2)
+
+```{r breusch-pagan}
+# Calculate the core statistic by hand, then compare the model sequence.
+auxiliary <- lm(I(residuals(core_fit)^2) ~ BREADY_DISP3 + GRAFT3 + log_workers,
+                data = study)
+bp_manual <- nobs(core_fit) * summary(auxiliary)$r.squared
+stopifnot(isTRUE(all.equal(bp_manual, bp$Chi_squared[bp$Model == "Core"])))
+tab(bp, "Studentized Breusch–Pagan · null of constant conditional error variance", digits = 4)
+```
+
+The core test supplies little evidence of the variance relationship it looks for. The full pitch model is closer to a conventional threshold. Neither test proves homoskedasticity. Under conditional mean independence, unequal variance alone leaves the OLS coefficients consistent but can make classical standard errors unreliable and OLS inefficient relative to a correctly weighted estimator. The archive lacks comparable observation-level variances for defensible precision weights.
+
+HC3 uses the squared leverage-adjusted residuals, $\hat u_i^2/(1-h_{ii})^2$, to estimate the covariance matrix. This preserves the OLS coefficients and re-estimates their uncertainty. A high-leverage row gets a larger adjustment for the residual shrinkage associated with fitting it. [MacKinnon and White, *Journal of Econometrics*](https://doi.org/10.1016/0304-4076%2885%2990158-7)
+
+```{r hc3-remedy}
+# The matrix computation makes clear where leverage enters.
+X <- model.matrix(core_fit)
+bread <- summary(core_fit)$cov.unscaled
+scores <- X * (residuals(core_fit) / (1 - hatvalues(core_fit)))
+V3 <- bread %*% crossprod(scores) %*% bread
+stopifnot(isTRUE(all.equal(V3, hc3(core_fit))))
+
+display_se <- subset(se_comparison, Model == "Core", select = -Model)
+display_se$Term <- term_labels(display_se$Term)
+tab(display_se, "Classical and HC3 uncertainty for the same coefficients", digits = 4)
+```
+
+A robust SE can be smaller or larger than a classical SE. Here HC3 changes the standard errors and test statistics while preserving the qualitative findings for the institutional slopes. The correction does not address omitted variables or correlations among economies.
+
+## Durbin–Watson and residual order
+
+Durbin–Watson compares squared differences between adjacent residuals with the residual sum of squares.
+
+$$
+DW=\frac{\sum_{i=2}^n(\hat u_i-\hat u_{i-1})^2}{\sum_{i=1}^n\hat u_i^2}.
+$$
+
+The classical diagnostic asks whether the errors exhibit first-order dependence along a meaningful sequence. Here the null reference simulates independent normal errors with constant variance, holding the design fixed. In a cross-section, changing the order changes which residuals count as adjacent, even while the coefficients and residuals attached to individual economies stay the same.
+
+```{r durbin-watson}
+# Reorder the SAME residuals, rather than refitting the core equation.
+e <- residuals(core_fit)
+by_code <- order(study$economy, method = "radix")
+by_year <- order(study$year, study$economy, method = "radix")
+by_region <- order(study$region, study$economy, method = "radix")
+direct_dw <- vapply(list(by_code, by_year, by_region), function(i) dw_stat(e[i]), numeric(1))
+dw_core <- subset(dw, Model == "Core", select = -Model)
+stopifnot(isTRUE(all.equal(direct_dw, dw_core$DW)))
+tab(dw_core, "Core Durbin–Watson values · same fit, three orderings", digits = 3)
+```
+
+Ordering by survey year groups distinct economies of similar vintage together. It gives a smaller nominal p-value here. This observation motivates a cohort sensitivity and supplies no time-series interpretation for adjacent economy labels. Regional shocks are a more plausible dependence channel. Cohort and region controls can absorb shared differences in levels. Region-clustered uncertainty addresses a different issue by allowing error dependence within a region. The study has only a few uneven groups, so the notebook shows those standard errors as a sensitivity and keeps the reference tests conditional on economy independence.
+
+```{r region-uncertainty}
+region_display <- subset(region_se, Model == "Core", select = -Model)
+region_display$Term <- term_labels(region_display$Term)
+tab(region_display, "HC3 versus region-clustered CR1 standard errors", digits = 3)
+```
+
+## Collinearity, functional form and influence
+
+For a regressor $X_j$, its variance inflation factor is $1/(1-R_j^2)$, where $R_j^2$ comes from regressing it on the other predictors. VIF measures how redundant the regressor is within the design. A large value can make its partial coefficient unstable and imprecise. Pairwise correlations help identify overlaps driven by particular measures, but multiple predictors can be jointly redundant without a striking pairwise correlation.
+
+```{r vif}
+# Rebuild the court VIF in the core using its auxiliary regression.
+doubt_aux <- lm(BREADY_DISP3 ~ GRAFT3 + log_workers, data = study)
+manual_vif <- 1 / (1 - summary(doubt_aux)$r.squared)
+stopifnot(isTRUE(all.equal(manual_vif, unname(model_vif(core_fit)["BREADY_DISP3"]))))
+
+vif_check <- vifs[vifs$Model %in% c("Core", "Full pitch terms"), ]
+vif_check$Term <- term_labels(vif_check$Term)
+tab(vif_check, "Variance inflation across the core and full pitch specifications")
+```
+
+```{r court-proxy-correlations}
+# Use the same QoG sample as the full pitch model.
+proxy_names <- c("BREADY_DISP3", "CRIME9", "DISP2")
+proxy_cor <- court_correlations[proxy_names, proxy_names]
+dimnames(proxy_cor) <- list(term_labels(proxy_names), term_labels(proxy_names))
+tab(data.frame(Measure = rownames(proxy_cor), proxy_cor, check.names = FALSE),
+    "Pairwise court-measure correlations")
+```
+
+The maximum VIF in the displayed models is **`r f2(max(vif_check$VIF))`**. The baseline retains court doubt because it most directly captures perceived impartiality. CRIME9 asks whether courts obstruct business operations. The distinction in the question being asked matters even when VIFs are modest.
+
+```{r residual-and-influence, fig.alt="Core residuals against fitted credit share, and Cook's distance against leverage with influential cases labeled."}
+old <- plot_start(c(1, 2))
+plot(core_diagnostics$Fitted, core_diagnostics$Residual, pch = 16, cex = 0.65,
+     col = adjustcolor(blue, alpha.f = 0.65), main = "Residuals versus fitted values",
+     xlab = "Fitted credit share (%)", ylab = "Residual (pp)")
+abline(h = 0, lty = 2, col = muted)
+lines(lowess(core_diagnostics$Fitted, core_diagnostics$Residual), col = burgundy, lwd = 2)
+plot(core_diagnostics$Leverage, core_diagnostics$Cook, pch = 16, cex = 0.65,
+     col = adjustcolor(blue, alpha.f = 0.65), main = "Influence versus leverage",
+     xlab = "Leverage (hat value)", ylab = "Cook's distance",
+     ylim = c(0, max(core_diagnostics$Cook) * 1.23))
+with(head(top_core_cook, 3), text(Leverage, Cook, labels = Economy, pos = 3, cex = 0.85))
+par(old)
+```
+
+A curved smoother can signal mean misspecification. Funnel-like spread can suggest unequal variance. Large leverage means the covariates are unusual. Cook's distance combines leverage with residual size to indicate how much the fitted regression may change when a row is omitted. These observations prompt sensitivity refits. Automatically deleting them would change the sample and could discard meaningful variation.
+
+```{r fit-range-and-reset}
+# RESET-style check: jointly test added powers of the fitted linear index.
+tab(form_checks, "Fitted range and HC3 test of added fitted powers", digits = 4)
+```
+
+The added fitted-powers test looks for systematic nonlinear information remaining in the residuals. Its null sets the coefficients on the squared and cubed fitted index to zero. Even a comfortable p-value leaves room for misspecification. The linear core produces **`r form_checks$Outside[form_checks$Model == "Core"]`** fitted value outside the feasible 0–100 range, so it is useful to check the result with a bounded conditional mean.
+
+# Challenge the result
+
+## Add regional, timing and development controls
+
+Income is a plausible omitted confounder. It can be associated with credit depth, regulatory capacity and exposure to bribe requests. It is unmeasured in the approved analytical inputs. Region and survey cohort account for some shared differences. T5, the share of firms with their own website, probes a dimension of firm digital adoption. Website adoption can also respond to institutions and credit. The comparison therefore asks how the estimates move under different conditioning choices. It cannot isolate the income channel.
+
+```{r adjustment-table}
+# The same economies enter these specifications. Compare estimates with intervals.
+adjustment_names <- c("Core", "Region controls", "Region and cohort controls",
+                      "Firm websites added", "Region, cohort and websites")
+adjustments <- sensitivity[match(adjustment_names, sensitivity$Model), ]
+stopifnot(length(unique(adjustments$N)) == 1L)
+tab(data.frame(Model = adjustments$Model, N = adjustments$N,
+               Bribery_pp = adjustments$Bribery,
+               HC3_interval = interval(adjustments$Bribe_low, adjustments$Bribe_high),
+               p = adjustments$Bribe_p, check.names = FALSE),
+    "Credit-share comparison for ten points more bribery, across specifications", digits = 3)
+```
+
+```{r adjustment-plot, fig.height=4.3, fig.alt="Dot and interval chart. The bribery estimate shrinks across specifications, and its interval crosses zero when region, cohort and website ownership are all added."}
+old <- plot_start(margins = c(4.4, 14.1, 2.2, 1))
+positions <- rev(seq_len(nrow(adjustments)))
+lim <- range(c(adjustments$Bribe_low, adjustments$Bribe_high, 0)) + c(-0.65, 0.65)
+plot(adjustments$Bribery, positions, type = "n", yaxt = "n", bty = "n",
+     xlim = lim, ylim = c(0.5, max(positions) + 0.5),
+     xlab = "Credit holding (pp) per 10-point increase in bribery", ylab = "",
+     main = "The bribery association shrinks with adjustment")
+axis(2, at = positions,
+     labels = c("Core", "Region", "Region + cohort", "Own website", "All three adjustments"),
+     tick = FALSE)
+abline(v = 0, lty = 2, col = muted)
+abline(h = positions, col = grid_col)
+effect_colors <- c(burgundy, rep(blue, nrow(adjustments) - 2L), burgundy)
+segments(adjustments$Bribe_low, positions, adjustments$Bribe_high, positions,
+         lwd = 2, col = effect_colors)
+points(adjustments$Bribery, positions, pch = 19, cex = 1.15, col = effect_colors)
+par(old)
+```
+
+The core estimate is `r f2(main_bribery$Estimate)` points. With all three adjustments it is `r f2(main_adjusted$Bribery)` points, with interval `r interval(main_adjusted$Bribe_low, main_adjusted$Bribe_high)`. Comparing two specifications answers a different question from comparing two p-values. Here both the size of the estimate and its precision change. The signed comparison between standardized court and bribery slopes also becomes imprecise under the combined adjustment.
+
+```{r contrast-sensitivity}
+contrast_rows <- sensitivity_contrasts[match(
+  c("Core", "Region and cohort controls", "Firm websites added", "Region, cohort and websites"),
+  sensitivity_contrasts$Model), ]
+tab(contrast_rows[c("Model", "Estimate", "Lower", "Upper", "p")],
+    "Does the signed court-versus-bribery difference survive adjustment?", digits = 3)
+```
+
+<aside class="margin-note"><b>What would it take for an omitted variable to erase the core association?</b><p>The appendix uses an equal-strength partial-R² benchmark. It asks how much residual variation a hypothetical variable would need to explain in both the regressor and outcome equations to move the point estimate to zero in the adverse direction. This is a model-based calibration of the omitted-variable problem. It does not measure national income or establish that the core coefficient is causal.</p></aside>
+
+```{r omitted-variable-benchmark}
+benchmark <- confounding
+benchmark$Term <- term_labels(benchmark$Term)
+tab(benchmark, "Compare an omitted-variable benchmark with observed website adoption", digits = 3)
+```
+
+## Give the outcome and the sample another chance
+
+Fractional logit models the conditional mean of FIN14 divided by 100 as a logistic function. Its fitted shares stay within zero and one. To compare with OLS we transform predictions back to percentage points, change one regressor, and average the prediction differences across economies. The numbers below use the pipeline's leverage-adjusted sandwich covariance and a delta-method interval for the nonlinear prediction difference. [Papke and Wooldridge, *Journal of Applied Econometrics*](https://doi.org/10.1002/%28SICI%291099-1255%28199611%2911%3A6%3C619%3A%3AAID-JAE418%3E3.0.CO%3B2-1)
+
+```{r fractional-response}
+# Reproduce the average fitted difference for a 10-point increase in bribery.
+# This is a prediction contrast evaluated on the same observed economies.
+shifted <- transform(study, GRAFT3 = GRAFT3 + 10)
+frac_rebuilt <- 100 * mean(predict(fractional, shifted, type = "response") -
+                             predict(fractional, study, type = "response"))
+frac_bribe <- subset(fractional_changes, Term == "GRAFT3")
+stopifnot(isTRUE(all.equal(frac_rebuilt, frac_bribe$Estimate, tolerance = 1e-8)))
+tab(data.frame(Model = c("Core OLS", "Fractional logit"),
+               Estimate = c(main_bribery$Estimate, frac_rebuilt),
+               Lower = c(main_bribery$Lower, frac_bribe$Lower),
+               Upper = c(main_bribery$Upper, frac_bribe$Upper)),
+    "Linear and bounded models · credit holding per ten points more bribery")
+```
+
+The bounded fit preserves the negative association on the core covariate set. The two models assume different mean functions. Their agreement says something about functional-form sensitivity; it leaves confounding and the choice of controls open.
+
+```{r sensitivity-map}
+# Each row changes the feature in its label. The alternate FIN23 outcome
+# measures constraint, so its coefficient is a difference in the constrained share.
+check_names <- c("Workers in levels", "Surveys from 2023", "Surveys from 2024",
+                 "Court obstacle, recent", "Court obstacle, all vintages",
+                 "Fully credit constrained", "Full pitch terms, QoG codes",
+                 paste("Omit", influence_cases))
+stress <- sensitivity[match(check_names, sensitivity$Model), ]
+tab(data.frame(Check = stress$Model, N = stress$N,
+               Outcome = ifelse(stress$Model == "Fully credit constrained", "FIN23", "FIN14"),
+               Court_measure = stress$Court_measure, Court_pp = stress$Court,
+               Court_95_CI = interval(stress$Court_low, stress$Court_high),
+               Bribery_pp = stress$Bribery,
+               Bribery_95_CI = interval(stress$Bribe_low, stress$Bribe_high)),
+    "Sensitivity to measures, waves, specification and influential economies")
+```
+
+In the narrower samples and the court-obstacle alternatives, the court intervals continue to include zero. The core bribery associations persist when the selected influential economies are left out one at a time. With FIN23, more bribery is associated with a larger fully credit-constrained share. FIN23 classifies firms using financing sources and application or nonapplication information. Read the sign as more constraint in that distinct outcome. The supplemental regressions are diagnostic comparisons. Their intervals are pointwise and the reported p-values carry no multiple-comparisons adjustment.
+
+# Draw conclusions from the chain of evidence
+
+The raw survey rows determine which firms and waves the study describes. The simple model asks whether court doubt alone explains much of the difference in credit holding. The core model compares economies with similar reported bribery exposure and firm size, and the legal-origin extension compares documented historical categories. The diagnostics show why HC3 and bounded-response checks are worthwhile. The sensitivity to geography and digital adoption changes the strength of the substantive conclusion.
+
+<div class="judgment-grid">
+  <section><h3>Court perceptions</h3><p>The point estimate changes sign after adding controls. The intervals still admit both signs. We learn that the measured perception indicator provides little precise evidence about credit holding in these specifications.</p></section>
+  <section><h3>Bribery</h3><p>The association is large in the core model and survives several measurement and influence checks. The adjusted comparison is materially smaller and imprecise. Its strength depends on the specification.</p></section>
+  <section><h3>Legal origin</h3><p>The conditional differences are imprecise whether English common law is compared with all documented other origins or with named civil-code families. Classifications and geography shape the sample.</p></section>
+</div>
+
+For a bank, the results suggest which inputs would be worth measuring directly when evaluating recovery and underwriting: recovery times, collateral enforceability, application rates and reasons for rejection. For policymakers and business associations, the negative core bribery association helps identify public transactions to study alongside application and financing outcomes. The study cannot rank the return on court reform against the return on anti-bribery policy. Establishing those returns would require linked outcomes and a design that isolates institutional changes from simultaneous differences in income, financial markets and firms' choices.
+
+## Check your understanding
+
+<details class="study-question">
+<summary>Why can a significantly negative bribery slope coexist with an inconclusive comparison to court doubt?</summary>
+<p>The individual test uses one slope and its variance. The direct comparison uses the two scaled slopes and their covariance. An interval for their difference can include zero even if one individual interval excludes zero.</p>
+</details>
+
+<details class="study-question">
+<summary>Why repeat the core equation on the legal-origin sample?</summary>
+<p>Adding the dummy also removes observations with unavailable classification. The fixed-sample refit lets us see how the model changes when we add the dummy, given the restriction to the classified sample.</p>
+</details>
+
+<details class="study-question">
+<summary>Would reordering the economies change the finance conclusion?</summary>
+<p>It changes which residual pairs are adjacent for Durbin–Watson. It leaves the OLS coefficients and row-specific fitted values the same. Dependence across regions warrants different checks from a time-series ordering.</p>
+</details>
+
+<details class="study-question">
+<summary>Does a large in-sample $R^2$ settle whether a model is suitable for policy?</summary>
+<p>Fit describes how well the regressors account for variation in the observed outcome. A regressor may improve fit because it reflects an outcome of the same lending process. Policy interpretation also requires a credible design and a well-defined comparison.</p>
+</details>
+
+## Brief checklist and reproducibility
+
+```{r checklist}
+tab(data.frame(
+  Brief = c("Population regression function and CLRM", "Multivariate specification and fit",
+            "Qualitative variable", "Diagnostics and corrective measures",
+            "Tests and economic interpretation"),
+  Where = c("Fit the first regression", "Extend the model", "Add a legal-origin dummy carefully",
+            "Diagnose the model; Challenge the result", "Test the claims; Draw conclusions")
+), "Where to find each commissioned methods item")
+```
+
+The notebook uses the same data, model functions and estimates as the paper and the PDF appendix. Its visible examples recalculate key quantities and check that they agree with the pipeline. To regenerate the notebook from the repository root, run `Rscript --vanilla scripts/notebook.R`. With the R packages on your library path, the equivalent in the RStudio console is `rmarkdown::render("notebook/notebook.Rmd")`. The HTML code menu can show or hide every chunk and download the embedded R Markdown source. A full rerun uses the files in the repository.
+
+```{r execution-details}
+# Analysis stages are sourced in order by scripts/build.R.
+stage_notes <- c("01_data.R" = "National totals, wave alignment and sample audit",
+                 "02_models.R" = "OLS fits, HC3 tests and contrasts",
+                 "03_diagnostics.R" = "Variance, order, collinearity and influence checks",
+                 "04_sensitivity.R" = "Alternative specifications and fractional response")
+tab(data.frame(Stage = names(stage_notes), Purpose = unname(stage_notes)),
+    "Analysis stages used in this notebook")
+
+R.version.string
+packageVersion("rmarkdown")
+packageVersion("knitr")
+```
+
+**Primary data and study context.** [World Bank Data360 Enterprise Surveys](https://data360.worldbank.org/en/dataset/WB_ES), [survey methodology](https://www.enterprisesurveys.org/en/methodology), [indicator definitions](https://www.enterprisesurveys.org/content/dam/enterprisesurveys/documents/methodology/Indicator-Description.pdf), [QoG Standard data and citation](https://doi.org/10.18157/qogstdjan22), [La Porta et al. on legal origins](https://doi.org/10.1257/jel.46.2.285).

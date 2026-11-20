@@ -110,5 +110,6 @@ The raw data, the pitch materials and the brief are already in place; don't modi
 - `scripts/setup.R` checks and installs R dependencies. `scripts/run.R` is the one-command entry point, and `scripts/build.R` runs the analysis stages for the pipeline and direct knitting.
 - `R/` contains numbered analysis stages, run in order. `generated/` holds rebuilt data and machine-readable results.
 - `appendix/appendix.Rmd` is the appendix source. `output/appendix.pdf` is its rendered review copy.
+- `notebook/notebook.Rmd` and `notebook/notebook.css` define the teaching notebook. Run `scripts/notebook.R` to rebuild `output/notebook.nb.html` from the shared analysis.
 - `report/report.md` is the paper. `presentation/storyboard.md` is the presentation storyboard.
 - `README.md` documents the run command. The root tracking files record decisions, progress and owner steering.

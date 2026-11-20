@@ -33,3 +33,19 @@ review copy to `output/`.
 The [paper](report/report.md) and [storyboard](presentation/storyboard.md)
 interpret those outputs. See `AGENTS.md` for the research rules,
 `STATUS.md` for the current phase and `DECISIONS.md` for analytical changes.
+
+## MBA econometrics notebook
+
+Open the [HTML notebook](output/notebook.nb.html) in a browser for the guided
+walkthrough from raw survey rows to interpretation. It includes the equations,
+figures, tables and foldable R code in one offline file. The
+[R Markdown source](notebook/notebook.Rmd) uses the same data build and models as
+the PDF appendix. Rebuild from the repository root with R and Pandoc.
+
+```sh
+Rscript --vanilla scripts/notebook.R
+```
+
+```powershell
+& 'C:/Program Files/R/R-4.6.1/bin/Rscript.exe' --vanilla scripts/notebook.R
+```

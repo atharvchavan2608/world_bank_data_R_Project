@@ -55,3 +55,11 @@
 - Decisions · Present the strongest contrary specification next to the core estimate.
 - Risks · National income remains unmeasured. Delivery year and additional-dataset approval remain open.
 - Next · Team review of the paper, appendix and storyboard.
+
+### MBA notebook follow-up
+
+- Done · Wrote, rendered and independently reviewed the MBA econometrics teaching notebook.
+- Changed · Added live R examples, distribution and diagnostic graphics, a specification comparison and short review questions.
+- Decisions · Use the shared R stages so the HTML walkthrough reproduces the initial study.
+- Risks · The strongest result remains sensitive to model specification, as shown in the notebook.
+- Next · Use the HTML and source for exploration and classroom discussion.
