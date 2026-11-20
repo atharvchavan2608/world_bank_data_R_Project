@@ -10,6 +10,7 @@ fontsize: 10pt
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+options(knitr.kable.NA = "")
 ```
 
 # Data and measurement
@@ -22,7 +23,9 @@ breakdown dimensions to be total. Indicators join on economy and survey year.
 
 ```{r data-tables}
 show <- function(x, caption = NULL, digits = 2) {
-  if ("p" %in% names(x)) x$p <- format.pval(x$p, digits = 3, eps = .Machine$double.eps)
+  if ("p" %in% names(x)) {
+    x$p <- format.pval(x$p, digits = max(3, digits), eps = .Machine$double.eps)
+  }
   knitr::kable(x, caption = caption, digits = digits, row.names = FALSE,
                booktabs = TRUE)
 }
@@ -214,10 +217,121 @@ contrast negative. The larger component p-value is
 comparisons refer to the average economy association and describe credit
 holding, which combines demand and lending decisions.
 
-# Diagnostics and sensitivity
+\newpage
 
-The next stage adds residual checks, Durbin-Watson, Breusch-Pagan, VIF
-and comparison of conventional and corrected inference.
+# Diagnostics and remedies
+
+## Error variance and robust inference
+
+The studentized Breusch--Pagan test regresses squared residuals on the
+original design and tests constant conditional error variance against a
+variance relationship with the regressors. The statistic is $nR^2$ of the
+auxiliary regression. Survey precision and cross-economy variation motivate
+HC3 even when this test is weak. Heteroskedasticity affects classical
+standard errors and efficiency. HC3 re-estimates the covariance of the OLS
+fit, so the OLS slopes remain the same. Comparable indicator-level survey
+variances are unavailable in these CSVs.
+
+```{r bp-and-se}
+show(setNames(bp, c("Model", "Chi squared", "df", "p")),
+     "Studentized Breusch-Pagan tests", digits = 3)
+
+display_se <- se_comparison
+display_se$Term <- unname(coefficient_labels[display_se$Term])
+for (column in c("Classical_p", "HC3_p")) {
+  display_se[[column]] <- format.pval(display_se[[column]], digits = 3)
+}
+names(display_se) <- c("Model", "Term", "Estimate", "Classical SE", "HC3 SE",
+                       "Classical p", "HC3 p")
+show(display_se, "Conventional and HC3 inference on the same OLS coefficients", digits = 3)
+```
+
+The core and the origin tests show little evidence of the specified
+variance relationship. The full specification is close to the conventional
+5 percent threshold. HC3 changes the reported precision without changing
+the conclusions for court doubt, bribery or legal origin.
+
+## Residual ordering
+
+Durbin--Watson is the squared change between neighboring residuals divided
+by the sum of squared residuals. The formal reference tests zero
+first-order dependence against either sign along each imposed sequence,
+simulating normal homoskedastic independent errors with the design fixed.
+The p-values are conditional on those assumptions. In a country
+cross-section, neighbors in a sorted list lack a temporal interpretation.
+A random reordering of the same core residuals gives a middle 95 percent
+range of `r sprintf("%.2f to %.2f", random_dw[1], random_dw[2])`. Shared shocks
+within geographical regions are a more plausible dependence concern.
+
+```{r dw-checks}
+show(dw, "Durbin-Watson under three orderings", digits = 3)
+```
+
+The nominal core p-value is smaller when ordering by survey year. The
+ordering places distinct economies with similar vintages next to each
+other and sometimes changes the conclusion of the reference test.
+
+\newpage
+
+## Collinearity and functional form
+
+VIF compares coefficient variance with that under an orthogonal design
+at equal regressor and disturbance variances. It measures precision loss.
+On the QoG sample, court doubt and the severe-obstacle share correlate
+at `r round(court_correlations["BREADY_DISP3", "CRIME9"], 2)`. The core retains
+court doubt as the direct measure of the proposed perception channel.
+The full-model maximum VIF is `r round(max(subset(vifs, Model == "Full pitch terms")$VIF), 2)`.
+The model choice follows the distinct survey concepts and denominators.
+
+```{r vifs}
+vif_wide <- reshape(vifs, idvar = "Term", timevar = "Model", direction = "wide")
+names(vif_wide) <- c("Term", "Core", "QoG", "Full pitch")
+show(vif_wide, "Variance inflation factors by model")
+```
+
+```{r court-correlations}
+court_terms <- c("BREADY_DISP3", "CRIME9", "DISP2")
+show(cbind(Measure = court_terms, as.data.frame(court_correlations[court_terms, court_terms])),
+     "Pairwise court correlations on the full-model sample")
+```
+
+```{r form}
+show(setNames(form_checks, c("Model", "Min fitted", "Max fitted", "Outside 0-100",
+                             "F", "df1", "df2", "p")),
+     "Fitted range and HC3 RESET-style test of added fitted powers", digits = 4)
+```
+
+The RESET-style check tests the joint restriction that adding squared and
+cubed standardized fitted values contributes nothing to the conditional
+mean. A rejection can reflect omitted variables or misspecified functional
+form. The core has an out-of-range fitted value. The fractional response
+sensitivity enforces the bounds.
+
+\newpage
+
+## Residuals and influence
+
+```{r residual-plots, fig.width=8, fig.height=3.15, out.width="100%"}
+old_par <- par(mfrow = c(1, 2), mar = c(4, 4, 0.5, 1), las = 1, family = "sans")
+plot(core_diagnostics$Fitted, core_diagnostics$Residual, pch = 16, cex = 0.55,
+     col = "#24536B", xlab = "Fitted credit share", ylab = "OLS residual")
+abline(h = 0, col = "grey55", lty = 2)
+lines(lowess(core_diagnostics$Fitted, core_diagnostics$Residual), col = "#A4482C", lwd = 2)
+plot(core_diagnostics$Leverage, core_diagnostics$Cook, pch = 16, cex = 0.55,
+     col = "#24536B", xlab = "Leverage", ylab = "Cook's distance",
+     ylim = c(0, 1.15 * max(core_diagnostics$Cook)))
+with(head(top_core_cook, 3), text(Leverage, Cook, labels = Economy, pos = 3, cex = 0.72))
+par(old_par)
+```
+
+```{r influence}
+show(top_core_cook[c("Economy", "Fitted", "Residual", "Studentized", "Leverage", "Cook")],
+     "The five largest core Cook's distances", digits = 3)
+```
+
+Leverage identifies unusual regressor values, while Cook's distance also
+uses the residual to summarize the potential effect on the fitted equation.
+The influence sensitivities retain the full sample for the primary fit.
 
 # Reproducibility
 

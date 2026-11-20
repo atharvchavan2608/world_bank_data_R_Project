@@ -18,10 +18,11 @@ The presentation schedule remains to be communicated. The brief labels the acade
 - Task 0 complete. The fresh-context reviewer challenged the wave anchor, overlap, effect comparison and dependence plan. Incorporated the revisions and verified the one-command setup PDF in a clean R process.
 - Task 1 complete. The data build retains 163 same-wave complete observations for the nine pitch survey indicators. The archived legal-origin comparison covers 129 economies and the English versus named civil-code comparison covers 119. Independent raw-source verification checked the economy-year merges, counts and selection profiles.
 - Task 2 complete. The six OLS fits, conventional and HC3 tests, contrasts and partial fit tables are generated. Independent SVD-based calculations reproduced the main inference.
+- Task 3 complete. The appendix reports studentized Breusch–Pagan, variance inflation factors, Durbin–Watson under three orderings, robust RESET-style tests and influence diagnostics. It displays conventional and HC3 inference together.
 
 ## Next
 
-- Task 3. Diagnose the linear models and assess the implications for inference.
+- Task 4. Refit with alternative measures, time windows, geography and functional form.
 
 ## Blocked
 

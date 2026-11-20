@@ -23,3 +23,11 @@
 - Decisions · Compare fit within fixed samples and use HC3 as primary uncertainty under economy independence.
 - Risks · Institutional associations can reflect omitted development and common regional conditions.
 - Next · Diagnose model fit, influence and differences in conventional and corrected inference.
+
+### Diagnostics
+
+- Done · Tested residual variance and ordering, checked VIF and fitted range, and examined influence.
+- Changed · Added the conventional/HC3 comparison and named influence evidence to the appendix.
+- Decisions · Retain HC3 and the theoretically motivated court proxy. Diagnose geographical and survey-year dependence through sensitivity fits.
+- Risks · One core prediction is below zero. The largest Cook's distance comes from Israel.
+- Next · Compare bounded response, alternative measures, windows, development proxies and geography.
