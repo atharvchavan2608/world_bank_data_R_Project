@@ -1,0 +1,182 @@
+economy,region,region_label
+AFG,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+AGO,SSF,Sub-Saharan Africa
+ALB,ECS,Europe & Central Asia
+ARG,LCN,Latin America & Caribbean
+ARM,ECS,Europe & Central Asia
+ATG,LCN,Latin America & Caribbean
+AUS,EAS,East Asia & Pacific
+AUT,ECS,Europe & Central Asia
+AZE,ECS,Europe & Central Asia
+BDI,SSF,Sub-Saharan Africa
+BEL,ECS,Europe & Central Asia
+BEN,SSF,Sub-Saharan Africa
+BFA,SSF,Sub-Saharan Africa
+BGD,SAS,South Asia
+BGR,ECS,Europe & Central Asia
+BHR,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+BHS,LCN,Latin America & Caribbean
+BIH,ECS,Europe & Central Asia
+BLR,ECS,Europe & Central Asia
+BLZ,LCN,Latin America & Caribbean
+BOL,LCN,Latin America & Caribbean
+BRA,LCN,Latin America & Caribbean
+BRB,LCN,Latin America & Caribbean
+BRN,EAS,East Asia & Pacific
+BTN,SAS,South Asia
+BWA,SSF,Sub-Saharan Africa
+CAF,SSF,Sub-Saharan Africa
+CAN,NAC,North America
+CHE,ECS,Europe & Central Asia
+CHL,LCN,Latin America & Caribbean
+CHN,EAS,East Asia & Pacific
+CIV,SSF,Sub-Saharan Africa
+CMR,SSF,Sub-Saharan Africa
+COD,SSF,Sub-Saharan Africa
+COG,SSF,Sub-Saharan Africa
+COL,LCN,Latin America & Caribbean
+COM,SSF,Sub-Saharan Africa
+CPV,SSF,Sub-Saharan Africa
+CRI,LCN,Latin America & Caribbean
+CYP,ECS,Europe & Central Asia
+CZE,ECS,Europe & Central Asia
+DEU,ECS,Europe & Central Asia
+DJI,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+DMA,LCN,Latin America & Caribbean
+DNK,ECS,Europe & Central Asia
+DOM,LCN,Latin America & Caribbean
+ECU,LCN,Latin America & Caribbean
+EGY,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+ERI,SSF,Sub-Saharan Africa
+ESP,ECS,Europe & Central Asia
+EST,ECS,Europe & Central Asia
+ETH,SSF,Sub-Saharan Africa
+FIN,ECS,Europe & Central Asia
+FJI,EAS,East Asia & Pacific
+FRA,ECS,Europe & Central Asia
+FSM,EAS,East Asia & Pacific
+GAB,SSF,Sub-Saharan Africa
+GBR,ECS,Europe & Central Asia
+GEO,ECS,Europe & Central Asia
+GHA,SSF,Sub-Saharan Africa
+GIN,SSF,Sub-Saharan Africa
+GMB,SSF,Sub-Saharan Africa
+GNB,SSF,Sub-Saharan Africa
+GNQ,SSF,Sub-Saharan Africa
+GRC,ECS,Europe & Central Asia
+GRD,LCN,Latin America & Caribbean
+GTM,LCN,Latin America & Caribbean
+GUY,LCN,Latin America & Caribbean
+HKG,EAS,East Asia & Pacific
+HND,LCN,Latin America & Caribbean
+HRV,ECS,Europe & Central Asia
+HUN,ECS,Europe & Central Asia
+IDN,EAS,East Asia & Pacific
+IND,SAS,South Asia
+IRL,ECS,Europe & Central Asia
+IRQ,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+ISL,ECS,Europe & Central Asia
+ISR,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+ITA,ECS,Europe & Central Asia
+JAM,LCN,Latin America & Caribbean
+JOR,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+JPN,EAS,East Asia & Pacific
+KAZ,ECS,Europe & Central Asia
+KEN,SSF,Sub-Saharan Africa
+KGZ,ECS,Europe & Central Asia
+KHM,EAS,East Asia & Pacific
+KIR,EAS,East Asia & Pacific
+KNA,LCN,Latin America & Caribbean
+KOR,EAS,East Asia & Pacific
+KWT,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+LAO,EAS,East Asia & Pacific
+LBN,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+LBR,SSF,Sub-Saharan Africa
+LCA,LCN,Latin America & Caribbean
+LKA,SAS,South Asia
+LSO,SSF,Sub-Saharan Africa
+LTU,ECS,Europe & Central Asia
+LUX,ECS,Europe & Central Asia
+LVA,ECS,Europe & Central Asia
+MAR,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+MDA,ECS,Europe & Central Asia
+MDG,SSF,Sub-Saharan Africa
+MDV,SAS,South Asia
+MEX,LCN,Latin America & Caribbean
+MKD,ECS,Europe & Central Asia
+MLI,SSF,Sub-Saharan Africa
+MLT,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+MMR,EAS,East Asia & Pacific
+MNE,ECS,Europe & Central Asia
+MNG,EAS,East Asia & Pacific
+MOZ,SSF,Sub-Saharan Africa
+MRT,SSF,Sub-Saharan Africa
+MUS,SSF,Sub-Saharan Africa
+MWI,SSF,Sub-Saharan Africa
+MYS,EAS,East Asia & Pacific
+NAM,SSF,Sub-Saharan Africa
+NER,SSF,Sub-Saharan Africa
+NGA,SSF,Sub-Saharan Africa
+NIC,LCN,Latin America & Caribbean
+NLD,ECS,Europe & Central Asia
+NOR,ECS,Europe & Central Asia
+NPL,SAS,South Asia
+NZL,EAS,East Asia & Pacific
+OMN,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+PAK,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+PAN,LCN,Latin America & Caribbean
+PER,LCN,Latin America & Caribbean
+PHL,EAS,East Asia & Pacific
+PNG,EAS,East Asia & Pacific
+POL,ECS,Europe & Central Asia
+PRT,ECS,Europe & Central Asia
+PRY,LCN,Latin America & Caribbean
+PSE,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+QAT,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+ROU,ECS,Europe & Central Asia
+RUS,ECS,Europe & Central Asia
+RWA,SSF,Sub-Saharan Africa
+SAU,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+SDN,SSF,Sub-Saharan Africa
+SEN,SSF,Sub-Saharan Africa
+SGP,EAS,East Asia & Pacific
+SLB,EAS,East Asia & Pacific
+SLE,SSF,Sub-Saharan Africa
+SLV,LCN,Latin America & Caribbean
+SOM,SSF,Sub-Saharan Africa
+SRB,ECS,Europe & Central Asia
+SSD,SSF,Sub-Saharan Africa
+STP,SSF,Sub-Saharan Africa
+SUR,LCN,Latin America & Caribbean
+SVK,ECS,Europe & Central Asia
+SVN,ECS,Europe & Central Asia
+SWE,ECS,Europe & Central Asia
+SWZ,SSF,Sub-Saharan Africa
+SYC,SSF,Sub-Saharan Africa
+TCD,SSF,Sub-Saharan Africa
+TGO,SSF,Sub-Saharan Africa
+THA,EAS,East Asia & Pacific
+TJK,ECS,Europe & Central Asia
+TKM,ECS,Europe & Central Asia
+TLS,EAS,East Asia & Pacific
+TON,EAS,East Asia & Pacific
+TTO,LCN,Latin America & Caribbean
+TUN,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+TUR,ECS,Europe & Central Asia
+TWN,EAS,East Asia & Pacific
+TZA,SSF,Sub-Saharan Africa
+UGA,SSF,Sub-Saharan Africa
+UKR,ECS,Europe & Central Asia
+URY,LCN,Latin America & Caribbean
+USA,NAC,North America
+UZB,ECS,Europe & Central Asia
+VCT,LCN,Latin America & Caribbean
+VEN,LCN,Latin America & Caribbean
+VNM,EAS,East Asia & Pacific
+VUT,EAS,East Asia & Pacific
+WSM,EAS,East Asia & Pacific
+XKX,ECS,Europe & Central Asia
+YEM,MEA,"Middle East, North Africa, Afghanistan & Pakistan"
+ZAF,SSF,Sub-Saharan Africa
+ZMB,SSF,Sub-Saharan Africa
+ZWE,SSF,Sub-Saharan Africa

@@ -16,8 +16,93 @@ knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 
 The unit of observation is an economy at a World Bank Enterprise Survey wave.
 FIN14 measures the share of eligible firms with a bank loan or line of credit.
-The data build will join indicators on economy code and survey year and
-reconcile the national totals with the visual abstract.
+The underlying question covers a loan or credit line from a financial
+institution. National rows require all six demographic and combined
+breakdown dimensions to be total. Indicators join on economy and survey year.
+
+```{r data-tables}
+show <- function(x, caption = NULL, digits = 2) {
+  knitr::kable(x, caption = caption, digits = digits, row.names = FALSE,
+               booktabs = TRUE)
+}
+show(coverage, "Economy coverage under the alternative rules")
+```
+
+The latest FIN14-observed wave and the latest wave in the union of archived
+WB_ES indicators differ for `r nrow(wave_disagreements)` economies. The
+union uses rows in this snapshot, so the check covers its published vintage.
+
+```{r survey-years}
+show(pitch_years, "Survey vintage in the pitch and the rebuilt sample")
+```
+
+\newpage
+
+## Reconciliation with the visual abstract
+
+```{r pitch-statistics}
+show(cbind(Indicator = rownames(pitch_summary), pitch_summary),
+     "Same-wave pitch variables, with the original units and dummy coding")
+```
+
+```{r rounding-differences}
+show(pitch_differences, "Differences at displayed precision", digits = 5)
+```
+
+Both displayed differences are reproducible by rounding first to two decimal
+places and then to one. The original rounding procedure is undocumented.
+FIN11 includes a tiny floating-point overshoot at the upper endpoint.
+
+## Indicator direction and sample selection
+
+WBES documents BREADY\_DISP3 as weighted disagreement about court
+independence and impartiality, following its September 2025 scale revision.
+CRIME9 and BREADY\_DISP6 increase with perceived severity of a court obstacle.
+The latter scores all response levels. See the
+[WBES indicator guide](https://www.enterprisesurveys.org/content/dam/enterprisesurveys/documents/methodology/Indicator-Description.pdf).
+
+```{r direction-and-selection}
+show(direction_values, "Same-wave checks for court doubt")
+```
+
+The archived minimum and maximum occur in `r paste(subset(direction_values, BREADY_DISP3 == min(study$BREADY_DISP3))$economy, collapse = ", ")`
+and `r paste(subset(direction_values, BREADY_DISP3 == max(study$BREADY_DISP3))$economy, collapse = ", ")`.
+The pitch note cited Germany and Pakistan as the extremes.
+
+```{r direction-correlations}
+show(cbind(Indicator = rownames(direction_cor), as.data.frame(direction_cor)),
+     "Correlations of the orientation checks")
+```
+
+```{r selection}
+show(profiles, "Observed credit and vintage by inclusion status")
+```
+
+```{r regions}
+show(region_counts, "Coverage by World Bank region")
+```
+
+EAS is East Asia and Pacific, ECS Europe and Central Asia, LCN Latin America
+and the Caribbean, MEA Middle East, North Africa, Afghanistan and Pakistan,
+NAC North America, SAS South Asia, and SSF Sub-Saharan Africa.
+
+The archived QoG variable is from La Porta et al. (1999). Code 1 is English
+common law, codes 2, 4 and 5 are French, German and Scandinavian
+commercial-code origins, and code 3 is Socialist. Missing codes remain
+missing in the primary origin comparisons. The all-known contrast pools
+codes 2 through 5. The named civil-code contrast uses codes 2, 4 and 5
+as the comparison group. The generated origin audit distinguishes absent
+economy rows from matched rows lacking a code and lists the pitch and sensitivity
+classification. See the [QoG codebook](https://datafinder.qog.gu.se/variable/lp_legor).
+
+```{r origin-counts}
+show(origin_counts, "Archived legal-origin coverage")
+```
+
+GRAFT3 covers six public transaction types and treats refusals as affirmative
+responses. DISP2 is conditional on reporting a dispute. FIN11 describes the
+latest loan or line among borrowing firms. FIN20 records non-application
+attributed to sufficient funds in the last fiscal year.
 
 # Model and hypotheses
 

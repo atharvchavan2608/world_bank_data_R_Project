@@ -106,6 +106,7 @@ Decide each of these yourself, justify the decision in the report, and don't hid
 The raw data, the pitch materials and the brief are already in place; don't modify them. The first session creates the working structure (R scripts, generated data, outputs, the `.Rmd` appendix, the report and the storyboard) and documents it here.
 
 - `dataset/` contains the fixed Data360 snapshot, dictionaries and legal-origin lookup.
+- `config/` records classification metadata and its provenance.
 - `scripts/setup.R` checks and installs R dependencies. `scripts/run.R` is the one-command entry point.
 - `R/` contains numbered analysis stages, run in order. `generated/` holds rebuilt data and machine-readable results.
 - `appendix/appendix.Rmd` is the appendix source. `output/appendix.pdf` is its rendered review copy.

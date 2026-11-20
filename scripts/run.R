@@ -1,4 +1,7 @@
 if (!file.exists("AGENTS.md")) stop("Run this command from the project root.")
+if (.Platform$OS.type == "windows") {
+  invisible(Sys.setlocale("LC_CTYPE", ".UTF-8"))
+}
 source("scripts/setup.R")
 if (!rmarkdown::pandoc_available()) stop("Pandoc was not found.")
 if (!nzchar(Sys.which("pdflatex"))) stop("pdfLaTeX was not found on PATH.")
