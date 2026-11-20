@@ -63,3 +63,11 @@
 - Decisions · Use the shared R stages so the HTML walkthrough reproduces the initial study.
 - Risks · The strongest result remains sensitive to model specification, as shown in the notebook.
 - Next · Use the HTML and source for exploration and classroom discussion.
+
+### Court-confidence follow-up
+
+- Done · Ran country cases, an exact region–year comparison, a confidence-group check and a separate repeat-wave obstacle analysis.
+- Changed · Reframed the paper, storyboard and notebook around the question of fair courts and credit. Added the country lookup and appendix exhibits.
+- Decisions · Use sample and confidence ranks to select examples and rely on the full uncertainty intervals for the conclusion.
+- Risks · Direct confidence is observed once per economy. The repeat-wave check uses a different measure and compares economy aggregates.
+- Next · Use the court-first guide to explain the results and implications.

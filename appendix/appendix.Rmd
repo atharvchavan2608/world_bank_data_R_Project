@@ -490,6 +490,100 @@ The literal pitch fit reproduces the pitch's legal-origin fallback and
 includes log workers. It is a specification sensitivity. The documented
 origin comparisons in the preceding section retain unknown cases as missing.
 
+\newpage
+
+# Do firms have more credit where they trust the courts?
+
+Our confidence score reverses the World Bank's published doubt measure:
+$\mathrm{confidence}=100-\mathrm{BREADY\_DISP3}$. The unit is an economy
+and a survey wave. Credit is the share of eligible firms holding a loan
+or line of credit. The indicator describes national perceptions of court
+impartiality. It cannot distinguish individual courts or track individual
+lending decisions.
+
+## Compare countries surveyed in the same region and year
+
+We illustrate the question using the largest eligible survey-year group
+from each of four regions, with a minimum of eight economies per group.
+The lower- and higher-confidence cases are closest by rank to the first
+and third within-group quartiles. The selection uses no credit outcomes.
+
+```{r peer-country-exhibit}
+case_label <- function(country, score) sprintf("%s (%.1f)", country, score)
+case_exhibit <- data.frame(
+  Wave = court_pairs$Wave,
+  "Lower confidence (score)" = case_label(court_pairs$Lower_confidence, court_pairs$Lower_score),
+  "Credit %" = court_pairs$Lower_credit,
+  "Higher confidence (score)" = case_label(court_pairs$Higher_confidence, court_pairs$Higher_score),
+  "Credit %" = court_pairs$Higher_credit,
+  "Gap (pp)" = court_pairs$Credit_difference, check.names = FALSE
+)
+show(case_exhibit, "Illustrative country pairs. The gap is higher-score credit minus lower-score credit.", digits = 1)
+```
+
+Some pairs have more widespread credit in the higher-confidence country;
+others have less. Exact matching on region and year leaves other country
+differences in place. These examples are descriptive, so we test whether
+there is a reliable average pattern in the broader data.
+
+```{r confidence-graded}
+show(court_quartiles[c("Group", "N", "Confidence", "Credit")],
+     "Confidence rank groups from lowest (Q1) to highest (Q4)", digits = 1)
+```
+
+The top group has higher raw credit holding than the bottom group.
+With bribery and firm size held fixed, its fitted gap is
+`r sprintf("%.2f", court_high_low["Estimate"])` points
+[`r sprintf("%.2f", court_high_low["Lower"])`, `r sprintf("%.2f", court_high_low["Upper"])`].
+The joint HC3 test of all group differences gives $p=$
+`r sprintf("%.3f", court_group_joint["p"])`. The ranking does not give a
+clear adjusted pattern.
+
+\newpage
+
+## Estimate the court-confidence association across the sample
+
+We estimate the confidence difference first on its own, then holding
+bribery and average employment fixed. A second comparison adds an
+intercept for each World Bank region–survey year cell with at least four
+economies. We also fit the model without the group intercepts on those
+same rows. The final row uses the share classified as fully credit
+constrained as the outcome.
+
+```{r confidence-results}
+confidence_exhibit <- court_effects[c("Comparison", "N", "Estimate", "Lower", "Upper", "p")]
+show(confidence_exhibit, "Outcome difference per 10 points more confidence. HC3 intervals.", digits = 3)
+```
+
+The confidence slopes are small relative to their uncertainty. No
+specification gives a clear positive association with credit holding.
+The auxiliary outcome, the share of fully credit-constrained firms,
+also gives little information about the confidence slope. The peer
+model compares economies within a region–year; HC3 still uses an
+independence approximation for inference.
+
+## Compare changes within an economy using the longer-running question
+
+Direct court confidence has `r court_time_coverage$Repeat_economies[1]`
+economies with repeat observations in the snapshot. The older CRIME9
+question measures whether courts are a major or very severe obstacle to
+business. It provides an alternative comparison using the latest two
+complete waves for eligible economies in the main cross-section. We difference national
+observations in FIN14 and CRIME9 and, in the adjusted models, include the
+changes in bribery and average employment and the years between waves.
+The estimates are in credit percentage points per ten-point decline in
+the share reporting a severe court obstacle.
+
+```{r court-change-results}
+change_exhibit <- court_change_effects[c("Comparison", "N", "Estimate", "Lower", "Upper", "p")]
+show(change_exhibit, "Within-economy changes. HC3 intervals.", digits = 3)
+```
+
+The repeat-wave estimates remain inconclusive in the different date
+windows. Differencing removes time-constant economy characteristics.
+Shifts in banking, economic conditions or which firms were interviewed
+can still matter. This comparison concerns changing court obstacles.
+
 # Reproducibility
 
 ```{r versions}

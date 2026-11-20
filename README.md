@@ -37,8 +37,12 @@ interpret those outputs. See `AGENTS.md` for the research rules,
 ## MBA econometrics notebook
 
 Open the [HTML notebook](output/notebook.nb.html) in a browser for the guided
-walkthrough from raw survey rows to interpretation. It includes the equations,
-figures, tables and foldable R code in one offline file. The
+walkthrough from raw survey rows to interpretation. The opening guide gives
+named country comparisons, the court-confidence estimate and its uncertainty,
+and a repeat-wave check using the separate court-obstacle question. Expand
+the country lookup to inspect the same-wave values for every economy in the
+core sample. The notebook includes equations, figures, tables and foldable
+R code in one offline file. The
 [R Markdown source](notebook/notebook.Rmd) uses the same data build and models as
 the PDF appendix. Rebuild from the repository root with R and Pandoc.
 

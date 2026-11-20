@@ -79,25 +79,30 @@ term_labels <- function(x) {
 }
 main_adjusted <- sensitivity[sensitivity$Model == "Region, cohort and websites", ]
 main_bribery <- core_effects[core_effects$Comparison == "Bribery incidence, 10 points", ]
+plain_effects <- function(x) {
+  data.frame(Comparison = x$Comparison, Economies = x$N, Estimate = x$Estimate,
+             "95% interval" = interval(x$Lower, x$Upper), p = x$p, check.names = FALSE)
+}
 ```
 
 <div class="notebook-kicker">MBA Econometrics · Research notebook</div>
 
-A business can need external finance and still be unable to obtain it. A lender can want to serve more businesses and still be reluctant to lend when recovering a debt is costly. Those two decisions meet in our outcome, the share of formal firms holding a loan or credit line. We use World Bank Enterprise Surveys to ask whether that share moves with court perceptions, exposure to bribery and the legal origin of company law.
+**Do firms tend to have more credit in countries where managers trust the courts to be fair?** A lender may be more willing to lend when it expects a fair hearing and can enforce a contract. We use the World Bank Enterprise Surveys to check whether the countries line up that way.
 
 <div class="study-strip" aria-label="Study at a glance">
   <div><strong>`r nrow(study)`</strong><span>economies in the core model</span></div>
-  <div><strong>`r nrow(known)`</strong><span>with an archived legal-origin code</span></div>
-  <div><strong>`r f2(main_bribery$Estimate)` pp</strong><span>core bribery association for a 10-point rise</span></div>
-  <div><strong>`r f2(main_adjusted$Bribery)` pp</strong><span>with geography, cohort and website adoption</span></div>
+  <div><strong>`r f2(court_effects$Estimate[1])` pp</strong><span>credit difference per 10 points more confidence, before adjustment</span></div>
+  <div><strong>`r f2(court_effects$Estimate[2])` pp</strong><span>same comparison after allowing for bribery and firm size</span></div>
+  <div><strong>`r f2(court_effects$Estimate[4])` pp</strong><span>comparison within the same region and survey year</span></div>
 </div>
 
-Use the contents to move through the analysis. **Show** reveals the R behind an exhibit, and the **Code** menu controls all chunks at once. Estimates are live calculations from the archived inputs.
+**Short answer.** We found no clear evidence that countries where firms trust the courts more have more firms holding credit. The estimates are small, change direction when we account for other differences, and are uncertain. Start with the country examples and the simple checks below. **Show** reveals the R behind an exhibit. The later sections explain the methods in more detail.
 
 <details class="mobile-contents">
 <summary>Contents</summary>
 <nav aria-label="Notebook contents">
 <ol>
+<li><a href="#the-country-comparison-in-plain-english">The country comparison in plain English</a></li>
 <li><a href="#the-lending-question">The lending question</a></li>
 <li><a href="#build-the-cross-section">Build the cross-section</a></li>
 <li><a href="#explore-before-fitting">Explore before fitting</a></li>
@@ -110,6 +115,95 @@ Use the contents to move through the analysis. **Show** reveals the R behind an 
 </ol>
 </nav>
 </details>
+
+# The country comparison in plain English
+
+## Can we compare countries and court systems?
+
+**Why this data?** The Enterprise Surveys ask comparable questions of firms in different economies. We use the national reply summary for the court-impartiality question and the share of firms with a loan or line of credit from the same survey wave. We flip the published doubt index so that the **confidence score** goes up when managers view courts more favorably. More confidence and more credit are each easier to read in the same direction. [World Bank country survey data](https://www.enterprisesurveys.org/en/data), [indicator guide](https://www.enterprisesurveys.org/content/dam/enterprisesurveys/documents/methodology/Indicator-Description.pdf)
+
+**What it means.** The score describes opinions about the courts of an economy, as reported by eligible formal firms. Individual courts, judges, cases and loan applications are outside these aggregates. The World Bank's separate Business Ready project collects measures such as litigation time and enforcement cost. Those answer a different question about court performance and are outside the Enterprise Surveys regression used here. [World Bank Business Ready dispute-resolution methods](https://www.worldbank.org/en/businessready/about-us/faq)
+
+<details class="study-question">
+<summary>Look up an economy in the study sample</summary>
+
+```{r country-lookup}
+# These are the same national, same-wave inputs used in the regressions.
+# The World Bank confidence measure is an index. Other columns are percentages.
+tab(court_country_profiles, "Country lookup · court confidence, credit and related survey measures", digits = 1)
+```
+
+The credit, bribery, serious-obstacle and full-constraint columns are percentages from national survey estimates. The confidence column is a score out of 100. The lookup uses the archived study waves.
+
+</details>
+
+## What do actual countries show?
+
+**Why compare peers?** Start with countries surveyed in the same broad region and year. This lets us hold broad geography and timing fixed as we compare the pattern. For each of the four largest eligible groups from distinct regions, R selects economies near the lower and upper confidence quartiles. No credit outcome enters the selection rule.
+
+```{r country-pairs}
+# Show one comparable-year pair per selected region. Use the exact scores
+# in calculations and round only to label the exhibit.
+pair_label <- function(country, score) sprintf("%s (%.1f)", country, score)
+tab(data.frame(
+  Wave = court_pairs$Wave,
+  "Lower confidence (score)" = pair_label(court_pairs$Lower_confidence, court_pairs$Lower_score),
+  "Credit %" = court_pairs$Lower_credit,
+  "Higher confidence (score)" = pair_label(court_pairs$Higher_confidence, court_pairs$Higher_score),
+  "Credit %" = court_pairs$Higher_credit,
+  "Credit gap (pp)" = court_pairs$Credit_difference, check.names = FALSE
+), "Four same-region, same-year comparisons · credit gap is higher score minus lower score", digits = 1)
+```
+
+**What we found.** Spain scores higher than Armenia and has more firms holding credit. Trinidad and Tobago scores higher than Brazil and has fewer. The pairs point in different directions.
+
+**What it means.** Court confidence and credit can move together, but the higher-confidence country can have less credit. Country stories illustrate the question. For an answer across the data, use all eligible comparisons and report their uncertainty.
+
+## Does the pattern hold across countries?
+
+**Why run the analysis this way?** First group countries by their confidence score and look at average credit. Then ask what a ten-point score difference corresponds to, first on its own and then among countries with comparable observed bribery and average employment. The tighter check compares countries inside the same region and survey year. It uses groups of at least four economies and repeats the prior model on those same rows so a change can be separated from a change in sample.
+
+```{r confidence-quartiles}
+# A descriptive check that does not assume the pattern is a straight line.
+tab(court_quartiles[c("Group", "N", "Confidence", "Credit")],
+    "Average credit across four ranked confidence groups · Q1 is lowest", digits = 1)
+```
+
+```{r confidence-estimates}
+# The estimate and interval are in percentage points per 10 confidence points.
+# The last row changes the outcome to the share of fully credit-constrained firms.
+tab(plain_effects(court_effects), "How much does the outcome differ for ten points more confidence?")
+```
+
+**What we found.** The raw comparison is `r f2(court_effects$Estimate[1])` percentage points more credit per ten confidence points. After allowing for bribery and firm size it is `r f2(court_effects$Estimate[2])` points. The same-region, same-year result is `r f2(court_effects$Estimate[4])` points, with an interval of `r interval(court_effects$Lower[4], court_effects$Upper[4])`. All three intervals include zero. Looking for steps between the confidence groups also gives little evidence of an association after adjustment. Their joint test has $p=$ `r f3(court_group_joint["p"])`. The alternate outcome, full credit constraint, gives an estimate close to zero.
+
+**What it means.** The sign of the raw comparison is consistent with the lending story. That pattern does not hold up across the adjusted models. The intervals leave room for modest differences under those models. The evidence gives us no reliable basis for forecasting how widespread credit is from this national confidence score.
+
+## What happens when we compare a country with itself?
+
+**Why try it?** Countries differ in long-standing ways. Comparing two survey waves for the same economy removes its fixed differences from the change comparison. The archived impartiality question is observed only once per economy. For this separate check we use an older question on whether courts are a **major or very severe obstacle** to business. We compare the latest two usable waves for economies in the main sample, with the earlier wave in 2013 or later for the main repeat-wave fit.
+
+```{r repeat-coverage}
+tab(court_time_coverage, "How often the two court measures can be compared over time", digits = 0)
+```
+
+```{r court-change}
+# One difference per economy. Positive Fewer_obstacles means a decline in the
+# percentage of firms rating courts a serious obstacle.
+tab(plain_effects(court_change_effects), "Change in credit per ten-point decline in the share reporting severe court obstacles")
+```
+
+**What we found.** In `r court_change_effects$N[2]` economies with two usable waves under the main date rule, a ten-point decline in the share of firms calling courts a serious obstacle corresponds to `r f2(court_change_effects$Estimate[2])` points of change in credit holding after allowing for changes in bribery, firm size and the wave gap. The interval, `r interval(court_change_effects$Lower[2], court_change_effects$Upper[2])`, covers credit declines and gains. The other date windows also leave the direction uncertain.
+
+**What it means.** The repeat waves show no clear pattern for the obstacle question. The question measures whether courts disrupt business. The national surveys can interview a changing mix of firms, and economic conditions can change between waves. This check tells us about changes in reported obstacles and credit, with those limits.
+
+## What should a manager take away?
+
+**Bribery.** The basic adjusted model associates ten points more bribery with `r f2(main_bribery$Estimate)` points in credit holding. With geography, survey cohort and firm website use included, the estimate is `r f2(main_adjusted$Bribery)` points and its interval includes zero. Bribery is a stronger correlate in the simpler model. The size of that association depends on what we compare.
+
+**Legal origin.** The comparison by historical legal family is imprecise. It offers little guidance for a lender choosing between markets. Both the court score and the legal-origin category are broad indicators.
+
+**Decision.** Before pricing a loan or recommending a reform, measure enforcement and lending directly. The useful operational questions are how long recovery takes, how much a lender recovers, who applies for credit, and where applications are declined. The survey gives a country comparison of credit already held.
 
 # The lending question
 
@@ -892,7 +986,8 @@ The notebook uses the same data, model functions and estimates as the paper and 
 stage_notes <- c("01_data.R" = "National totals, wave alignment and sample audit",
                  "02_models.R" = "OLS fits, HC3 tests and contrasts",
                  "03_diagnostics.R" = "Variance, order, collinearity and influence checks",
-                 "04_sensitivity.R" = "Alternative specifications and fractional response")
+                 "04_sensitivity.R" = "Alternative specifications and fractional response",
+                 "05_court_comparisons.R" = "Named country examples, court confidence and repeat-wave comparisons")
 tab(data.frame(Stage = names(stage_notes), Purpose = unname(stage_notes)),
     "Analysis stages used in this notebook")
 

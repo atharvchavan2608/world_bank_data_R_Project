@@ -23,10 +23,11 @@ The presentation schedule remains to be communicated. The brief labels the acade
 - Task 5 complete. The paper follows the seven brief sections and is about 3,100 words before references. The paper and appendix were checked against the generated estimates and the primary sources. The referee's edits separate the signed comparison from the individual tests and clarify the survey and legal-origin coding.
 - Task 6 complete. The 11-slide storyboard gives one exhibit and speaker notes per slide. The final referee approved the report, appendix and storyboard against the brief. Clean runs via the pipeline and direct knitting produced identical CSVs and extracted PDF text. All 14 appendix pages were inspected.
 - Task 7 complete. The exploratory MBA notebook follows the archived inputs through the data audit, EDA, estimation, diagnostics and interpretation. An independent refit confirmed the headline estimates and intervals. Both HTML and PDF formats rebuilt in clean R sessions, and the notebook's offline navigation, math, figures and code disclosure were verified at desktop and mobile widths.
+- Task 8 complete. A court-first guide adds an all-economy lookup, four outcome-blind matched-year examples, a 144-economy peer comparison and a 108-economy repeat-wave check of severe court obstacles. A fresh-context independent rebuild reproduced the new tables and intervals. The revised paper and storyboard lead with the court-confidence result, and both the appendix and notebook were reknitted and inspected.
 
 ## Next
 
-- The paper, R Markdown appendix and presentation storyboard are ready for the team's review.
+- The revised paper, appendix, storyboard and plain-language HTML guide are ready for the team's review.
 
 ## Blocked
 
