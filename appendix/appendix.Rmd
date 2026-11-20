@@ -9,6 +9,18 @@ fontsize: 10pt
 ---
 
 ```{r setup, include=FALSE}
+if (!exists("built_by_pipeline", envir = knitr::knit_global(), inherits = FALSE)) {
+  project_root <- if (file.exists("AGENTS.md")) getwd() else normalizePath("..")
+  knitr::opts_knit$set(root.dir = project_root)
+  local({
+    previous <- getwd()
+    tryCatch({
+      setwd(project_root)
+      source("scripts/build.R", local = TRUE)
+      build_analysis(knitr::knit_global())
+    }, finally = setwd(previous))
+  })
+}
 knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 options(knitr.kable.NA = "")
 ```
@@ -453,6 +465,11 @@ The estimated bribery association attenuates under the regional and
 digital-adoption controls. The combined specification's bribery and
 standardized contrast intervals both span zero. The magnitude result
 from the core fit therefore has limited robustness to conditioning choices.
+
+Governments and business associations can use the observed patterns to
+identify transactions for closer study and pair them with credit application
+outcomes. Banks can assess recovery time and collateral enforceability
+directly before using court perceptions to inform underwriting.
 
 \newpage
 

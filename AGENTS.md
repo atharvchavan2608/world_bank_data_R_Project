@@ -107,7 +107,7 @@ The raw data, the pitch materials and the brief are already in place; don't modi
 
 - `dataset/` contains the fixed Data360 snapshot, dictionaries and legal-origin lookup.
 - `config/` records classification metadata and its provenance.
-- `scripts/setup.R` checks and installs R dependencies. `scripts/run.R` is the one-command entry point.
+- `scripts/setup.R` checks and installs R dependencies. `scripts/run.R` is the one-command entry point, and `scripts/build.R` runs the analysis stages for the pipeline and direct knitting.
 - `R/` contains numbered analysis stages, run in order. `generated/` holds rebuilt data and machine-readable results.
 - `appendix/appendix.Rmd` is the appendix source. `output/appendix.pdf` is its rendered review copy.
 - `report/report.md` is the paper. `presentation/storyboard.md` is the presentation storyboard.

@@ -21,10 +21,11 @@ The presentation schedule remains to be communicated. The brief labels the acade
 - Task 3 complete. The appendix reports studentized Breusch–Pagan, variance inflation factors, Durbin–Watson under three orderings, robust RESET-style tests and influence diagnostics. It displays conventional and HC3 inference together.
 - Task 4 complete. Alternative measures, bounded response, dates, cohort, geography, digital adoption, legal-origin coding and case omissions are in the appendix. Independent calculation reproduced the key OLS and fractional estimates. The bribery result attenuates under added conditioning and its interval spans zero with region, cohort and websites jointly.
 - Task 5 complete. The paper follows the seven brief sections and is about 3,100 words before references. The paper and appendix were checked against the generated estimates and the primary sources. The referee's edits separate the signed comparison from the individual tests and clarify the survey and legal-origin coding.
+- Task 6 complete. The 11-slide storyboard gives one exhibit and speaker notes per slide. The final referee approved the report, appendix and storyboard against the brief. Clean runs via the pipeline and direct knitting produced identical CSVs and extracted PDF text. All 14 appendix pages were inspected.
 
 ## Next
 
-- Task 6. Prepare the storyboard and complete the final cross-deliverable review.
+- The paper, R Markdown appendix and presentation storyboard are ready for the team's review.
 
 ## Blocked
 

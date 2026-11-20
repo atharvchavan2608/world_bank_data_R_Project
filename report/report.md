@@ -106,6 +106,6 @@ Visaria, S. (2009). Legal reform and loan repayment: The microeconomic impact of
 
 World Bank. (n.d.-a). *Enterprise Surveys* [Data set]. Data360. [Data360 WB_ES](https://data360.worldbank.org/en/dataset/WB_ES)
 
-World Bank. (n.d.-b). *Enterprise Surveys indicator descriptions*. [Indicator guide](https://www.enterprisesurveys.org/content/dam/enterprisesurveys/documents/methodology/Indicator-Description.pdf)
+World Bank. (n.d.-b). *Enterprise Surveys methodology*. [Survey methodology](https://www.enterprisesurveys.org/en/methodology)
 
-World Bank. (n.d.-c). *Enterprise Surveys methodology*. [Survey methodology](https://www.enterprisesurveys.org/en/methodology)
+World Bank. (2026, October 26). *Enterprise Surveys indicator descriptions*. [Indicator guide](https://www.enterprisesurveys.org/content/dam/enterprisesurveys/documents/methodology/Indicator-Description.pdf)

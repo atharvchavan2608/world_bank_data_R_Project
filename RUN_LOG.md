@@ -47,3 +47,11 @@
 - Decisions · Keep the main comparison and the strongest contrary specification together in the interpretation.
 - Risks · Region and digital adoption capture common conditions imperfectly. The regressions remain descriptive.
 - Next · Build the storyboard and close the referee and replication checks.
+
+### Final review
+
+- Done · Completed the 11-slide storyboard and obtained final referee sign-off against the commissioning checklist.
+- Changed · Added the direct-knit entry and aligned the appendix's managerial interpretation with the evidence.
+- Decisions · Present the strongest contrary specification next to the core estimate.
+- Risks · National income remains unmeasured. Delivery year and additional-dataset approval remain open.
+- Next · Team review of the paper, appendix and storyboard.
