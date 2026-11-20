@@ -15,3 +15,11 @@
 - Decisions · Use 163 economies for court and bribery and restrict legal-origin comparisons to documented classifications.
 - Risks · Double rounding explains the two displayed pitch differences mechanically. The original computation is unavailable.
 - Next · Estimate the nested model sequence and the court-versus-bribery contrast.
+
+### Estimation
+
+- Done · Estimated the six OLS models and independently cross-checked HC3, fit and hypothesis tests.
+- Changed · Added the standardized signed and exploratory magnitude comparisons with shared covariance.
+- Decisions · Compare fit within fixed samples and use HC3 as primary uncertainty under economy independence.
+- Risks · Institutional associations can reflect omitted development and common regional conditions.
+- Next · Diagnose model fit, influence and differences in conventional and corrected inference.

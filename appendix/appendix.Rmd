@@ -22,6 +22,7 @@ breakdown dimensions to be total. Indicators join on economy and survey year.
 
 ```{r data-tables}
 show <- function(x, caption = NULL, digits = 2) {
+  if ("p" %in% names(x)) x$p <- format.pval(x$p, digits = 3, eps = .Machine$double.eps)
   knitr::kable(x, caption = caption, digits = digits, row.names = FALSE,
                booktabs = TRUE)
 }
@@ -104,16 +105,119 @@ responses. DISP2 is conditional on reporting a dispute. FIN11 describes the
 latest loan or line among borrowing firms. FIN20 records non-application
 attributed to sufficient funds in the last fiscal year.
 
+\newpage
+
 # Model and hypotheses
 
-The design starts with a simple OLS regression on court doubt, then adds
-bribery exposure, firm size and legal origin. The study estimates
-associations across economies.
+The simple population regression function is $E[Y_i\mid D_i]=\alpha+\beta D_i$.
+The extended working model is
+$Y_i=\alpha+\beta D_i+\gamma B_i+\theta\log(W_i)+\delta L_i+u_i$.
+$Y_i$ is FIN14 in percentage points; $D_i$ is court doubt on its published
+0--100 scale, $B_i$ is the bribery incidence percentage, $W_i$ is the mean
+permanent full-time-equivalent employment per firm, and $L_i$ is one for
+English legal origin and zero for the model's documented comparison group.
+The multivariate core first omits $L_i$ to retain all recent economies.
 
-# Estimation and diagnostics
+The disturbance represents unobserved credit demand, income, banking and
+other economy conditions and survey measurement error. OLS minimizes
+the sum of squared residuals with equal weight per economy. For the
+classical linear model, the parameters enter linearly, the design has full
+rank, the errors have conditional mean zero, and conditional error variance
+is constant with zero covariance across economies. Conditional normality
+additionally gives exact finite-sample classical tests. We estimate the best
+linear projection as an association. Population orthogonality of projection
+errors is weaker than conditional mean independence and does not identify a
+causal coefficient.
 
-Estimation will follow the data audit. Planned outputs include conventional and
-HC3 inference, model fit, joint tests, Durbin-Watson, Breusch-Pagan and VIF.
+Test $H_0:\beta=0$, $H_0:\gamma=0$, and $H_0:\delta=0$ against two-sided
+alternatives. Greater doubt and bribery are expected to be negatively
+associated with credit. A positive common-law coefficient is a literature
+hypothesis. The overall joint test restricts all slopes to zero. The
+institutional test restricts the included court-doubt, bribery and
+legal-origin slopes jointly. For the main comparison,
+$H_0:s_D\beta-s_B\gamma=0$ versus a nonzero difference. The two sample
+SDs are held fixed in inference.
+
+FIN11 conditions on observed borrowers, FIN20 may reflect equilibrium
+credit demand, and DISP1 and DISP2 capture dispute incidence and selected
+use of resolution. CRIME9 is an alternative perception measure. Adding
+these variables tests specification sensitivity. The added fit can reflect
+joint determination or selection, and national income remains unobserved.
+
+## Fit and coefficient tests
+
+```{r model-fit}
+show(setNames(model_fit, c("Model", "N", "Slopes", "R squared", "Adjusted", "Residual SD")),
+     "OLS fit and residual standard deviation", digits = 3)
+```
+
+$R^2$ is the fraction of observed between-economy variation in FIN14 explained
+in sample. Adjusted $R^2$ penalizes added slopes. Changes across different
+samples also reflect the change in economies. The simple and core models use
+the same economies, as do the core on the QoG sample, QoG origin and full
+specification. Each institutional coefficient is a conditional association
+holding the other included variables fixed.
+
+\newpage
+
+```{r main-coefficients}
+coefficient_labels <- c("(Intercept)" = "Intercept", BREADY_DISP3 = "Court doubt",
+                        GRAFT3 = "Bribery", log_workers = "Log workers", common = "Common law")
+display_coefficients <- subset(model_coefficients,
+  (Model %in% c("Simple", "Core", "QoG origin") |
+     Model == "English vs civil codes" & Term == "common") & Inference == "HC3",
+  select = -Inference)
+display_coefficients$Term <- unname(coefficient_labels[display_coefficients$Term])
+show(display_coefficients,
+     "Primary coefficients with HC3 standard errors and 95 percent intervals", digits = 4)
+```
+
+The simple court slope explains little variation. Adding bribery and size
+improves fit on the same economies. The negative bribery slope remains
+visible on the smaller legal-origin sample. Both origin intervals admit
+negative and positive conditional associations.
+
+HC3 adjusts uncertainty for uneven residual variance and leverage. The
+reported t and robust Wald F reference distributions use the OLS residual
+degrees of freedom as a finite-sample approximation. The conventional
+inference and full coefficients are in the generated model tables.
+
+```{r model-joints}
+show(subset(joint_results, Model %in% c("Core", "QoG origin")),
+     "Classical and HC3 joint tests", digits = 4)
+```
+
+\newpage
+
+## Effects in interpretable units
+
+```{r translated-effects}
+show(core_effects, "Core associations in FIN14 percentage points, with HC3 intervals", digits = 3)
+```
+
+```{r partial-fit}
+show(partial_fit, "Sample standard deviations and partial R-squared", digits = 4)
+```
+
+The core bribery estimate corresponds to about
+`r round(abs(core_effects$Estimate[2]), 1)` percentage points lower credit
+holding for a ten-point rise in the incidence of bribe requests. The
+court-doubt interval spans zero for an equally sized change. Partial
+$R^2$ measures the fraction of residual variation in the model
+omitting the given term that is accounted for when it is added. The signed
+contrast uses both HC3 variances and their covariance. An exploratory
+intersection-union test asks if the standardized bribery slope is negative
+and exceeds court doubt in absolute magnitude. Its one-sided tests require
+the court-minus-bribery contrast to be positive and the court-plus-bribery
+contrast negative. The larger component p-value is
+`r format.pval(bribe_magnitude_p, digits = 3)`. The economic
+comparisons refer to the average economy association and describe credit
+holding, which combines demand and lending decisions.
+
+# Diagnostics and sensitivity
+
+The next stage adds residual checks, Durbin-Watson, Breusch-Pagan, VIF
+and comparison of conventional and corrected inference.
 
 # Reproducibility
 
