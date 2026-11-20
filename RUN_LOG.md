@@ -39,3 +39,11 @@
 - Decisions · Describe bribery as the stronger core correlate, with substantial attenuation under geography, timing and observed digital adoption.
 - Risks · Income remains unmeasured. Seven uneven geographic groups limit clustered inference.
 - Next · Write and check the paper against the appendix outputs and primary sources.
+
+### Paper
+
+- Done · Drafted and independently checked the seven-section report, references and headline numbers.
+- Changed · Added the one-restriction F test to the paper and appendix and clarified the archive year and origin source.
+- Decisions · Keep the main comparison and the strongest contrary specification together in the interpretation.
+- Risks · Region and digital adoption capture common conditions imperfectly. The regressions remain descriptive.
+- Next · Build the storyboard and close the referee and replication checks.
