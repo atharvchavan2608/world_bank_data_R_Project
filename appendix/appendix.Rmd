@@ -1,0 +1,40 @@
+---
+title: "Trust in Courts, Trust in Credit?"
+subtitle: "Replication and results appendix"
+output:
+  pdf_document:
+    number_sections: true
+geometry: margin=0.85in
+fontsize: 10pt
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+```
+
+# Data and measurement
+
+The unit of observation is an economy at a World Bank Enterprise Survey wave.
+FIN14 measures the share of eligible firms with a bank loan or line of credit.
+The data build will join indicators on economy code and survey year and
+reconcile the national totals with the visual abstract.
+
+# Model and hypotheses
+
+The design starts with a simple OLS regression on court doubt, then adds
+bribery exposure, firm size and legal origin. The study estimates
+associations across economies.
+
+# Estimation and diagnostics
+
+Estimation will follow the data audit. Planned outputs include conventional and
+HC3 inference, model fit, joint tests, Durbin-Watson, Breusch-Pagan and VIF.
+
+# Reproducibility
+
+```{r versions}
+cat(R.version.string, "\n")
+cat("Pandoc", as.character(rmarkdown::pandoc_version()), "\n")
+cat("rmarkdown", as.character(packageVersion("rmarkdown")), "\n")
+cat("knitr", as.character(packageVersion("knitr")), "\n")
+```
