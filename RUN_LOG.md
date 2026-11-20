@@ -31,3 +31,11 @@
 - Decisions · Retain HC3 and the theoretically motivated court proxy. Diagnose geographical and survey-year dependence through sensitivity fits.
 - Risks · One core prediction is below zero. The largest Cook's distance comes from Israel.
 - Next · Compare bounded response, alternative measures, windows, development proxies and geography.
+
+### Sensitivity
+
+- Done · Refit alternative outcomes, measures, windows, model forms and legal coding, with independent OLS and delta-method checks.
+- Changed · Added region and cohort controls, leave-region-out fits and the combined development stress test.
+- Decisions · Describe bribery as the stronger core correlate, with substantial attenuation under geography, timing and observed digital adoption.
+- Risks · Income remains unmeasured. Seven uneven geographic groups limit clustered inference.
+- Next · Write and check the paper against the appendix outputs and primary sources.

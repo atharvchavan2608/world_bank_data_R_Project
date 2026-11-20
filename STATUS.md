@@ -19,10 +19,11 @@ The presentation schedule remains to be communicated. The brief labels the acade
 - Task 1 complete. The data build retains 163 same-wave complete observations for the nine pitch survey indicators. The archived legal-origin comparison covers 129 economies and the English versus named civil-code comparison covers 119. Independent raw-source verification checked the economy-year merges, counts and selection profiles.
 - Task 2 complete. The six OLS fits, conventional and HC3 tests, contrasts and partial fit tables are generated. Independent SVD-based calculations reproduced the main inference.
 - Task 3 complete. The appendix reports studentized Breusch–Pagan, variance inflation factors, Durbin–Watson under three orderings, robust RESET-style tests and influence diagnostics. It displays conventional and HC3 inference together.
+- Task 4 complete. Alternative measures, bounded response, dates, cohort, geography, digital adoption, legal-origin coding and case omissions are in the appendix. Independent calculation reproduced the key OLS and fractional estimates. The bribery result attenuates under added conditioning and its interval spans zero with region, cohort and websites jointly.
 
 ## Next
 
-- Task 4. Refit with alternative measures, time windows, geography and functional form.
+- Task 5. Write the report and verify its references and numerical claims.
 
 ## Blocked
 

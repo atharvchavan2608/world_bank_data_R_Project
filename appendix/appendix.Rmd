@@ -333,6 +333,144 @@ Leverage identifies unusual regressor values, while Cook's distance also
 uses the residual to summarize the potential effect on the fitted equation.
 The influence sensitivities retain the full sample for the primary fit.
 
+\newpage
+
+# Sensitivity checks
+
+## Bounded response and alternative definitions
+
+The fractional-logit model fits FIN14 divided by 100 using Bernoulli
+quasi-likelihood and equal economy weights. The table reports average
+changes in predicted percentages, with leverage-adjusted sandwich
+standard errors and delta-method intervals. The fitted credit shares
+range from `r sprintf("%.1f to %.1f", fractional_range[1], fractional_range[2])` percent.
+
+```{r fractional-and-workers}
+display_fractional <- fractional_changes[c("Term", "Estimate", "SE", "Lower", "Upper")]
+display_fractional$Term <- c("Court doubt, +10", "Bribery, +10", "Workers doubled")
+show(display_fractional, "Fractional logit, average changes in credit percentage points")
+show(workers_form, "Distribution of employment on the two scales")
+```
+
+```{r sensitivity-tables}
+sensitivity_table <- function(x) {
+  interval <- function(a, b) sprintf("[%.2f, %.2f]", a, b)
+  data.frame(Model = x$Model, N = x$N, Court = x$Court,
+             `Court 95% CI` = interval(x$Court_low, x$Court_high),
+             Bribery = x$Bribery,
+             `Bribery 95% CI` = interval(x$Bribe_low, x$Bribe_high),
+             check.names = FALSE)
+}
+measure_models <- c("Core", "Workers in levels", "Court obstacle, recent",
+                    "Court obstacle, all vintages", "FIN14 on FIN23 sample",
+                    "Fully credit constrained", "Full pitch terms, QoG codes",
+                    "Full pitch terms and coding")
+show(sensitivity_table(subset(sensitivity, Model %in% measure_models)),
+     "HC3 sensitivity to measures and specification, per 10-point change")
+```
+
+The obstacle models use CRIME9. The all-vintages fit adds older surveys
+under the same indicator code and spans changes in survey instruments.
+FIN23 measures a fully constrained share and has the opposite economic
+interpretation to credit holding. Its sample coincides with the FIN14
+core in this snapshot. Remaining rows use court doubt.
+
+\newpage
+
+## Cohorts, geography and influence
+
+```{r timing-influence}
+timing_models <- c("Surveys from 2023", "Surveys from 2024", "Survey cohort controls",
+                   "Region controls", "Region and cohort controls")
+show(sensitivity_table(subset(sensitivity,
+                              Model %in% timing_models | startsWith(Model, "Omit "))),
+     "HC3 sensitivity to dates, region and single-economy omissions")
+
+show(sensitivity_table(region_sensitivity), "HC3 sensitivity to omitting each region")
+```
+
+Survey cohort indicators pool the sparse ends of the latest-wave window.
+Israel has the largest Cook's distance. Kiribati combines high leverage
+with the below-zero fitted value. Guatemala has the largest core leverage.
+These checks change the sample one economy at a time.
+
+\newpage
+
+## Regional dependence and legal origin
+
+```{r region-se-and-origin}
+display_region <- region_se
+display_region$Term <- unname(coefficient_labels[display_region$Term])
+names(display_region) <- c("Model", "Term", "HC3 SE", "Region CR1 SE", "Groups", "Min N", "Max N")
+show(display_region, "Standard errors allowing within-region dependence", digits = 3)
+show(origin_region_overlap, "Legal-origin overlap within World Bank regions")
+show(origin_sensitivity, "Common-law associations and HC3 intervals", digits = 3)
+```
+
+The regional covariance sums OLS scores by region and applies a
+degrees-of-freedom correction. The cluster count and size imbalance limit
+the accuracy of asymptotic clustered tests. The table gives standard
+errors as a sensitivity check. Region intercepts remove shared level
+differences. They need not remove correlated errors. Regions with a
+single legal-origin category do not contribute within-region variation
+to the dummy coefficient.
+
+\newpage
+
+## Unobserved development
+
+T5 is the WBES share of firms with their own website. Digital adoption
+captures a dimension of development and can itself respond to the
+institutional and credit environment. The augmented regression is
+exploratory. National income is unavailable within the approved
+analytical inputs.
+
+```{r developments}
+show(sensitivity_table(subset(sensitivity, Model %in% c("Website-sample core",
+                          "Firm websites added", "Region, cohort and websites"))),
+     "HC3 sensitivity to observed firm digital adoption")
+show(subset(sensitivity_contrasts, select = c(Model, N, Estimate, Lower, Upper, p)),
+     "Court-minus-bribery standardized differences under added controls")
+display_confounding <- confounding
+display_confounding$Term <- unname(coefficient_labels[display_confounding$Term])
+names(display_confounding) <- c("Term", "Equal partial R2", "T5 with regressor",
+                                "T5 with credit", "T5 sample")
+show(display_confounding, "Omitted-variable benchmark for moving the point estimate to zero",
+     digits = 3)
+```
+
+The equal partial R-squared is the share of residual variation that one
+hypothetical omitted variable would need to explain in each of the exposure
+and outcome equations, conditional on the observed regressors appropriate
+to each equation, to move the coefficient to zero under adverse
+confounding. The website columns show observed partial fit as a reference.
+This exercise does not estimate the relationship of income with either
+credit or the institutional measures.
+
+The estimated bribery association attenuates under the regional and
+digital-adoption controls. The combined specification's bribery and
+standardized contrast intervals both span zero. The magnitude result
+from the core fit therefore has limited robustness to conditioning choices.
+
+\newpage
+
+## Full pitch regression
+
+```{r full-pitch}
+full_pitch_fit <- sensitivity_models[["Full pitch terms and coding"]]
+show(coefficient_tests(full_pitch_fit),
+     "Original survey variables and pitch legal-origin coding, HC3", digits = 3)
+full_pitch_terms <- setdiff(names(coef(full_pitch_fit)), "(Intercept)")
+full_pitch_joint <- rbind(block_test(full_pitch_fit, full_pitch_terms, vcov(full_pitch_fit)),
+                          block_test(full_pitch_fit, full_pitch_terms))
+show(data.frame(Test = c("Overall classical", "Overall HC3"), full_pitch_joint),
+     "Overall tests of the literal pitch regression", digits = 3)
+```
+
+The literal pitch fit reproduces the pitch's legal-origin fallback and
+includes log workers. It is a specification sensitivity. The documented
+origin comparisons in the preceding section retain unknown cases as missing.
+
 # Reproducibility
 
 ```{r versions}
